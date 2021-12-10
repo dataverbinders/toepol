@@ -1,0 +1,3 @@
+[submodule "NLExtract"]
+	path = NLExtract
+	url = https://github.com/dataverbinders/NLExtract.git
