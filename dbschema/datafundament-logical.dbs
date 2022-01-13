@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="datafundament" id="Project-1c37" database="LogicalDesign" >
+	<comment><![CDATA[Logisch datamodel van datafundament gemeente Rotterdam.
+
+Auteurs: Daniel Kapitan, Elma Molthoff, Michael Kooloos.
+Versie: 0.1
+Datum 01-11-2022]]></comment>
+	<schema name="datafundament" >
+		<table name="domeinwaarden_gebruiksdoel" prior="Entity" >
+			<comment><![CDATA[Gebruiksdoel is een limitatieve lijst van 11 elementen, zie
+https://imbag.github.io/catalogus/hoofdstukken/domeinwaarden#82-gebruiksdoel]]></comment>
+			<column name="waarde" type="text" jt="-1" mandatory="y" />
+			<column name="omschrijving" type="text" jt="-1" mandatory="y" />
+			<index name="Pk_domeinwaarden_gebruiksdoel_waarde" unique="PRIMARY_KEY" >
+				<column name="waarde" />
+			</index>
+		</table>
+		<table name="ligplaats" prior="adresseerbaar_object" >
+			<column name="identificatie" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De unieke aanduiding van een ligplaats.]]></comment>
+			</column>
+			<column name="status" type="text" length="1" jt="-1" mandatory="y" >
+				<comment><![CDATA[De fase van de levenscyclus van een ligplaats waarin de betreffende ligplaats zich bevindt.]]></comment>
+			</column>
+			<column name="geometrie" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De tweedimensionale geometrische representatie van de omtrekken van een ligplaats.]]></comment>
+			</column>
+			<column name="geconstateerd" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Een aanduiding waarmee kan worden aangegeven dat een ligplaats in de registratie is opgenomen als gevolg van een feitelijke constatering, zonder dat er op het moment van opname sprake was van een regulier brondocument voor deze opname.]]></comment>
+			</column>
+			<column name="documentdatum" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De datum waarop het brondocument is vastgesteld op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een ligplaats heeft plaatsgevonden.]]></comment>
+			</column>
+			<column name="documentnummer" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een ligplaats heeft plaatsgevonden binnen een gemeente.]]></comment>
+			</column>
+			<column name="hoofdadres" type="text" jt="-1" />
+			<column name="nevenadres" type="text" jt="-1" />
+			<index name="Pk_ligplaats_identificatie" unique="PRIMARY_KEY" >
+				<column name="identificatie" />
+			</index>
+			<fk name="heeft als hoofdadres" to_schema="datafundament" to_table="nummeraanduiding" type="NonIdentifyingOptional" >
+				<fk_column name="hoofdadres" pk="identificatie" />
+			</fk>
+			<fk name="heeft_als_nevenadres" to_schema="datafundament" to_table="nummeraanduiding" type="NonIdentifyingOptional" >
+				<fk_column name="nevenadres" pk="identificatie" />
+			</fk>
+		</table>
+		<table name="nummeraanduiding" prior="Entity" spec="" >
+			<comment><![CDATA[De unieke aanduiding van een nummeraanduiding.
+Metadata:https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#73-nummeraanduiding]]></comment>
+			<column name="identificatie" type="text" length="4" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: De naam die aan een openbare ruimte is toegekend in een daartoe strekkend formeel gemeentelijk besluit.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#721-identificatie]]></comment>
+			</column>
+			<column name="huisnummer" type="varchar" length="80" jt="12" mandatory="y" >
+				<comment><![CDATA[Definitie: Een door of namens het gemeentebestuur ten aanzien van een adresseerbaar object toegekende nummering.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#732-huisnummer]]></comment>
+			</column>
+			<column name="huisletter" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: Een door of namens het gemeentebestuur ten aanzien van een adresseerbaar object toegekende toevoeging aan een huisnummer in de vorm van een alfanumeriek teken.
+Metdata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#733-huisletter]]></comment>
+			</column>
+			<column name="huisnummertoevoeging" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: De fase van de levenscyclus van een openbare ruimte waarin de betreffende openbare ruimte zich bevindt.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#724-status]]></comment>
+			</column>
+			<column name="postcode" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: 	De door PostNL vastgestelde code behorende bij een bepaalde combinatie van een straatnaam en een huisnummer.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#735-postcode]]></comment>
+			</column>
+			<column name="type_adresseerbaar_object" type="varchar" length="40" jt="12" mandatory="y" >
+				<comment><![CDATA[Definitie: De aard van het object waaraan een nummeraanduiding is toegekend.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#736-type-adresseerbaar-object]]></comment>
+			</column>
+			<column name="status" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie:	De fase van de levenscyclus van een nummeraanduiding waarin de betreffende nummeraanduiding zich bevindt.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#737-status]]></comment>
+			</column>
+			<column name="geconstateerd" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: 	en aanduiding waarmee kan worden aangegeven dat een nummeraanduiding in de registratie is opgenomen als gevolg van een feitelijke constatering, zonder dat er op het moment van opname sprake was van een regulier brondocument voor deze opname.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#738-geconstateerd]]></comment>
+			</column>
+			<column name="documentdatum" type="date" jt="91" mandatory="y" >
+				<comment><![CDATA[Definitie: 	De datum waarop het brondocument is vastgesteld op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een nummeraanduiding heeft plaatsgevonden.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#739-documentdatum]]></comment>
+			</column>
+			<column name="documentnummer" type="varchar" length="40" jt="12" mandatory="y" >
+				<comment><![CDATA[Definitie: 		De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een nummeraanduiding heeft plaatsgevonden binnen een gemeente.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#7310-documentnummer]]></comment>
+			</column>
+			<column name="woonplaats_identificatie" type="char" length="4" jt="1" mandatory="y" >
+				<comment><![CDATA[Defintie: Een adresseerbaar object ligt in een woonplaats.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#7311-relatie-ligt-in-gerelateerde-woonplaats]]></comment>
+			</column>
+			<column name="openbare_ruimte_identificatie" type="varchar" length="80" jt="12" >
+				<comment><![CDATA[Definitie: 	De unieke aanduiding van een Openbare ruimte waaraan een adresseerbaar object is gelegen.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#7312-relatie-ligt-aan-gerelateerde-openbare-ruimte]]></comment>
+			</column>
+			<index name="Pk_nummeraanduiding_identificatie" unique="PRIMARY_KEY" >
+				<column name="identificatie" />
+			</index>
+			<fk name="ligt_in" to_schema="datafundament" to_table="woonplaats" type="Identifying" >
+				<fk_column name="woonplaats_identificatie" pk="identificatie" />
+			</fk>
+			<fk name="ligt_aan" to_schema="datafundament" to_table="openbare_ruimte" type="Identifying" >
+				<fk_column name="openbare_ruimte_identificatie" pk="identificatie" />
+			</fk>
+		</table>
+		<table name="openbare_ruimte" prior="Entity" spec="" >
+			<comment><![CDATA[De unieke aanduiding van een openbare ruimte.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#72-openbare-ruimte]]></comment>
+			<column name="identificatie" type="varchar" length="80" jt="12" mandatory="y" >
+				<comment><![CDATA[Definitie: De naam die aan een openbare ruimte is toegekend in een daartoe strekkend formeel gemeentelijk besluit.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#721-identificatie]]></comment>
+			</column>
+			<column name="naam" type="varchar" length="80" jt="12" mandatory="y" >
+				<comment><![CDATA[Definitie: De benaming van een door het gemeentebestuur aangewezen woonplaats.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#712-naam]]></comment>
+			</column>
+			<column name="type" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: De aard van de als zodanig benoemde openbare ruimte.
+Metdata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#723-type]]></comment>
+			</column>
+			<column name="status" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: De fase van de levenscyclus van een openbare ruimte waarin de betreffende openbare ruimte zich bevindt.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#724-status]]></comment>
+			</column>
+			<column name="geconstateerd" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: 	Een aanduiding waarmee kan worden aangegeven dat een openbare ruimte in de registratie is opgenomen als gevolg van een feitelijke constatering, zonder dat er op het moment van opname sprake was van een regulier brondocument voor deze opname.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#725-geconstateerd]]></comment>
+			</column>
+			<column name="documentdatum" type="date" jt="91" mandatory="y" >
+				<comment><![CDATA[Definitie: 	De datum waarop het brondocument is vastgesteld op basis waarvan een opname, mutatie of verwijdering van gegevens ten aanzien van een openbare ruimte heeft plaatsgevonden.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#726-documentdatum]]></comment>
+			</column>
+			<column name="documentnummer" type="varchar" length="40" jt="12" mandatory="y" >
+				<comment><![CDATA[Definitie: 		De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een openbare ruimte heeft plaatsgevonden binnen een gemeente.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#727-documentnummer]]></comment>
+			</column>
+			<column name="woonplaats_identificatie" type="char" length="4" jt="1" />
+			<index name="Pk_openbare_ruimte_identificatie" unique="PRIMARY_KEY" >
+				<column name="identificatie" />
+			</index>
+			<fk name="ligt_in" to_schema="datafundament" to_table="woonplaats" type="Identifying" >
+				<fk_column name="woonplaats_identificatie" pk="identificatie" />
+				<comment><![CDATA[Defintie: Een openbare ruimte ligt in een woonplaats.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#728-relatie-ligt-in-gerelateerde-woonplaats]]></comment>
+			</fk>
+		</table>
+		<table name="pand" prior="Entity" >
+			<column name="identificatie" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: 	De unieke aanduiding van een pand.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#741-identificatie]]></comment>
+			</column>
+			<column name="geomtrie" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: 	De minimaal tweedimensionale geometrische representatie van het bovenzicht van de omtrekken van een pand.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#742-geometrie]]></comment>
+			</column>
+			<column name="oorspronkelijk_bouwjaar" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: De aanduiding van het jaar waarin een pand oorspronkelijk als bouwkundig gereed is of zal worden opgeleverd.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#743-oorspronkelijk-bouwjaar]]></comment>
+			</column>
+			<column name="status" type="text" length="1" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: De fase van de levenscyclus van een pand waarin het betreffende pand zich bevindt.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#744-status]]></comment>
+			</column>
+			<column name="geconstateerd" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: 	Een aanduiding waarmee kan worden aangegeven dat een pand in de registratie is opgenomen als gevolg van een feitelijke constatering, zonder dat er op het moment van opname sprake was van een regulier brondocument voor deze opname.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#745-geconstateerd]]></comment>
+			</column>
+			<column name="documentdatum" type="date" jt="91" mandatory="y" >
+				<comment><![CDATA[Definitie: De datum waarop het brondocument is vastgesteld, op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een pand heeft plaatsgevonden.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#746-documentdatum]]></comment>
+			</column>
+			<column name="documentnummer" type="date" jt="91" >
+				<comment><![CDATA[Definitie: 	De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een pand heeft plaatsgevonden binnen een gemeente.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#747-documentnummer]]></comment>
+			</column>
+			<index name="Pk_pand_identificatie" unique="PRIMARY_KEY" >
+				<column name="identificatie" />
+			</index>
+		</table>
+		<table name="standplaats" prior="ligplaats_0" >
+			<column name="identificatie" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De unieke aanduiding van een standplaats.]]></comment>
+			</column>
+			<column name="status" type="text" length="1" jt="-1" mandatory="y" >
+				<comment><![CDATA[De fase van de levenscyclus van een standplaats waarin de betreffende standplaats zich bevindt.]]></comment>
+			</column>
+			<column name="geometrie" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De tweedimensionale geometrische representatie van de omtrekken van een standplaats.]]></comment>
+			</column>
+			<column name="geconstateerd" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Een aanduiding waarmee kan worden aangegeven dat een standplaats in de registratie is opgenomen als gevolg van een feitelijke constatering, zonder dat er op het moment van opname sprake was van een regulier brondocument voor deze opname.]]></comment>
+			</column>
+			<column name="documentdatum" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De datum waarop het brondocument is vastgesteld op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een standplaats heeft plaatsgevonden.]]></comment>
+			</column>
+			<column name="documentnummer" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een standplaats heeft plaatsgevonden binnen een gemeente.]]></comment>
+			</column>
+			<column name="hoofdadres" type="text" jt="-1" />
+			<column name="nevenadres" type="text" jt="-1" />
+			<index name="Pk_ligplaats_identificatie_0" unique="PRIMARY_KEY" >
+				<column name="identificatie" />
+			</index>
+			<fk name="heeft als hoofdadres" to_schema="datafundament" to_table="nummeraanduiding" type="NonIdentifyingOptional" >
+				<fk_column name="hoofdadres" pk="identificatie" />
+			</fk>
+			<fk name="heeft_als_nevenadres" to_schema="datafundament" to_table="nummeraanduiding" type="Identifying" >
+				<fk_column name="nevenadres" pk="identificatie" />
+			</fk>
+		</table>
+		<table name="verblijfsobject" prior="ligplaats_0" >
+			<column name="identificatie" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De unieke aanduiding van een verblijfsobject.]]></comment>
+			</column>
+			<column name="geometrie" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De tweedimensionale geometrische representatie van de omtrekken van een verblijfsobject.]]></comment>
+			</column>
+			<column name="gebruiksdoel" type="text" jt="-1" >
+				<comment><![CDATA[Een categorisering van de gebruiksdoelen van het betreffende verblijfsobject zoals in de vergunning is opgenomen of bij constatering is vastgesteld.]]></comment>
+			</column>
+			<column name="oppervlakte" prior="oppervlakt" type="int" jt="4" mandatory="y" >
+				<comment><![CDATA[De gebruiksoppervlakte van een verblijfsobject in gehele vierkante meters.]]></comment>
+			</column>
+			<column name="status" type="text" length="1" jt="-1" mandatory="y" >
+				<comment><![CDATA[De fase van de levenscyclus van een verblijfsobject waarin de betreffende verblijfsobject zich bevindt.]]></comment>
+			</column>
+			<column name="geconstateerd" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Een aanduiding waarmee kan worden aangegeven dat een verblijfsobject in de registratie is opgenomen als gevolg van een feitelijke constatering, zonder dat er op het moment van opname sprake was van een regulier brondocument voor deze opname.]]></comment>
+			</column>
+			<column name="documentdatum" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De datum waarop het brondocument is vastgesteld op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een verblijfsobject heeft plaatsgevonden.]]></comment>
+			</column>
+			<column name="documentnummer" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een verblijfsobject heeft plaatsgevonden binnen een gemeente.]]></comment>
+			</column>
+			<column name="hoofdadres" type="text" jt="-1" />
+			<column name="nevenadres" type="text" jt="-1" />
+			<column name="pand_identificatie" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[De unieke aanduiding van een Pand waarvan het Verblijfsobject onderdeel uitmaakt.]]></comment>
+			</column>
+			<index name="Pk_ligplaats_identificatie_1" unique="PRIMARY_KEY" >
+				<column name="identificatie" />
+			</index>
+			<fk name="heeft als hoofdadres" to_schema="datafundament" to_table="nummeraanduiding" type="NonIdentifyingOptional" >
+				<fk_column name="hoofdadres" pk="identificatie" />
+			</fk>
+			<fk name="heeft_als_nevenadres" to_schema="datafundament" to_table="nummeraanduiding" type="NonIdentifyingOptional" >
+				<fk_column name="nevenadres" pk="identificatie" />
+			</fk>
+			<fk name="heeft_gebruiksdoel(en)" to_schema="datafundament" to_table="domeinwaarden_gebruiksdoel" type="ManyToMany" >
+				<fk_column name="gebruiksdoel" pk="waarde" />
+			</fk>
+			<fk name="maakt_deel_uit_van" to_schema="datafundament" to_table="pand" type="NonIdentifyingOptional" >
+				<fk_column name="pand_identificatie" pk="identificatie" />
+			</fk>
+		</table>
+		<table name="woonplaats" prior="Entity" spec="" >
+			<comment><![CDATA[De unieke aanduiding van een woonplaats, zoals opgenomen in de landelijke woonplaatsentabel.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#711-identificatie]]></comment>
+			<column name="identificatie" type="char" length="4" jt="1" mandatory="y" >
+				<comment><![CDATA[Definitie: De unieke aanduiding van een woonplaats, zoals opgenomen in de landelijke woonplaatsentabel.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#712-naam]]></comment>
+			</column>
+			<column name="naam" type="varchar" length="80" jt="12" mandatory="y" >
+				<comment><![CDATA[Definitie: De benaming van een door het gemeentebestuur aangewezen woonplaats.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#712-naam]]></comment>
+			</column>
+			<column name="geometrie" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: De tweedimensionale geometrische representatie van het vlak dat wordt gevormd door de omtrekken van een woonplaats.
+Metdata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#713-geometrie]]></comment>
+			</column>
+			<column name="status" type="varchar" length="30" jt="12" mandatory="y" >
+				<enumeration><![CDATA['Woonplaats aangewezen','Woonplaats ingetrokken']]></enumeration>
+				<comment><![CDATA[Definitie: De fase van de levenscyclus van een woonplaats, waarin de betreffende woonplaats zich bevindt.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#714-status]]></comment>
+			</column>
+			<column name="geconstateerd" type="text" jt="-1" mandatory="y" >
+				<comment><![CDATA[Definitie: 	Een aanduiding waarmee kan worden aangegeven dat een woonplaats in de registratie is opgenomen als gevolg van een feitelijke constatering, zonder dat er op het moment van opname sprake was van een regulier brondocument voor deze opname.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#715-geconstateerd]]></comment>
+			</column>
+			<column name="documentdatum" type="date" jt="91" mandatory="y" >
+				<comment><![CDATA[Definitie: 	De datum waarop het brondocument is vastgesteld op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een woonplaats heeft plaatsgevonden.
+
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#716-documentdatum]]></comment>
+			</column>
+			<column name="documentnummer" type="varchar" length="40" jt="12" mandatory="y" >
+				<comment><![CDATA[Definitie: 	De unieke aanduiding van het brondocument op basis waarvan een opname, mutatie of een verwijdering van gegevens ten aanzien van een woonplaats heeft plaatsgevonden binnen een gemeente.
+Metadata: https://imbag.github.io/catalogus/hoofdstukken/attributen--relaties#717-documentnummer]]></comment>
+			</column>
+			<index name="Pk_woonplaats_identificatie" unique="PRIMARY_KEY" >
+				<column name="identificatie" />
+			</index>
+		</table>
+		<table name="woz_object" prior="Entity" spec="" >
+			<comment><![CDATA[Definitie: De onroerende zaak waarvan op grond van
+de Wet WOZ de waarde moet worden bepaald en vastgesteld.
+Metadata: https://www.waarderingskamer.nl/fileadmin/publieksportaal/documents/public/lv-woz/Catalogus_Basisregistratie_WOZ_versie_1.7.pdf]]></comment>
+			<column name="woz_objectnummer" type="text" jt="-1" />
+			<column name="woz_object_geometrie" type="text" jt="-1" />
+			<column name="soort_objectcode" type="text" jt="-1" />
+			<column name="datum_begin_geldigheid_woz_objectgegevens" type="date" jt="91" />
+			<column name="datum_einde_geldigheid_woz_objectgegevens" type="date" jt="91" />
+			<column name="to_do_meer_toevoegen" type="date" jt="91" />
+			<column name="nummeraanduiding" type="text" length="80" jt="-1" />
+			<index name="Unq_woz_object_woz_objectnummer" unique="UNIQUE_KEY" >
+				<column name="woz_objectnummer" />
+			</index>
+			<fk name="heeft_als_aanduiding" to_schema="datafundament" to_table="nummeraanduiding" type="Identifying" >
+				<fk_column name="nummeraanduiding" pk="identificatie" />
+			</fk>
+		</table>
+		<table name="woz_waarde" prior="Entity" >
+			<comment><![CDATA[Definitie: De op grond van de Wet WOZ vastgestelde
+waarde van het WOZ-object naar de genoemde waardepeildatum.
+Metadata: https://www.waarderingskamer.nl/fileadmin/publieksportaal/documents/public/lv-woz/Catalogus_Basisregistratie_WOZ_versie_1.7.pdf]]></comment>
+			<column name="woz_objectnummer" type="text" jt="-1" />
+			<column name="gerelateerd_woz_object" type="date" jt="91" />
+			<column name="vastgestelde_waarde" type="text" jt="-1" />
+			<column name="waardepeildatum" type="date" jt="91" />
+			<column name="toestandpeildatum" type="date" jt="91" />
+			<column name="heffingsmaatstaf_ozb" type="date" jt="91" />
+			<column name="heffingsmaatstaf_ozb_gebruikers" type="date" jt="91" />
+			<column name="datum_begin_geldigheid_waardegegevens" prior="datum_geldigheid_waardegegevens" type="date" jt="91" />
+			<column name="datum_einde_geldigheid_waardegegevens" prior="datum_eind_geldigheid_waardegegevens" type="date" jt="91" />
+			<column name="aanduiding_waardegegevens_in_onderzoek" type="int" jt="4" />
+			<column name="tijdstip_registratie_waardegegevens" type="datetime" jt="93" />
+			<column name="ingangsdatum_waarde" type="date" jt="91" />
+			<fk name="is_voor" to_schema="datafundament" to_table="woz_object" type="Identifying" >
+				<fk_column name="woz_objectnummer" pk="woz_objectnummer" />
+			</fk>
+		</table>
+	</schema>
+	<layout name="Layout" id="Layout-107e" show_relation="name" >
+		<comment><![CDATA[datafundament]]></comment>
+		<entity schema="datafundament" name="domeinwaarden_gebruiksdoel" color="C1D8EE" x="848" y="400" />
+		<entity schema="datafundament" name="ligplaats" color="C1D8EE" x="48" y="144" />
+		<entity schema="datafundament" name="nummeraanduiding" color="3986C1" x="288" y="80" />
+		<entity schema="datafundament" name="openbare_ruimte" color="3986C1" x="288" y="416" />
+		<entity schema="datafundament" name="pand" color="C1D8EE" x="848" y="80" />
+		<entity schema="datafundament" name="standplaats" color="3986C1" x="48" y="416" />
+		<entity schema="datafundament" name="verblijfsobject" color="3986C1" x="608" y="80" />
+		<entity schema="datafundament" name="woonplaats" color="3986C1" x="608" y="416" />
+		<entity schema="datafundament" name="woz_object" color="C1D8EE" x="1168" y="80" />
+		<entity schema="datafundament" name="woz_waarde" color="C1D8EE" x="1584" y="80" />
+		<group name="WOZ" color="C4E0F9" >
+			<entity schema="datafundament" name="woz_object" />
+			<entity schema="datafundament" name="woz_waarde" />
+		</group>
+		<group name="BAG" color="C4E0F9" >
+			<entity schema="datafundament" name="woonplaats" />
+			<entity schema="datafundament" name="openbare_ruimte" />
+			<entity schema="datafundament" name="pand" />
+			<entity schema="datafundament" name="standplaats" />
+			<entity schema="datafundament" name="ligplaats" />
+			<entity schema="datafundament" name="domeinwaarden_gebruiksdoel" />
+			<entity schema="datafundament" name="verblijfsobject" />
+			<entity schema="datafundament" name="nummeraanduiding" />
+		</group>
+	</layout>
+</project>
