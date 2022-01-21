@@ -116,8 +116,8 @@ def create_ndjson(bag_file, xml_file, ndjson_dir, root_tag):
 @task
 def load_bq(name_bag, path_bag, schema_bag):
     table_ref = dataset_ref.table(name_bag.name)
-    # job_config.schema = schema_bag
-    job_config.autodetect = True
+    job_config.schema = schema_bag
+    # job_config.autodetect = True
 
     with open(path_bag, "rb") as source_file:
         job = client.load_table_from_file(source_file, table_ref, job_config=job_config)
@@ -136,11 +136,9 @@ with Flow("BAG-Extract") as flow:
     # job_config.autodetect = True
     # job_config.schema = schema
     
-    # wpl_xml, wpl_dir = create_xml_list.run(WPL_FILE)
-    # wpl_mapped = create_ndjson.map(bag_file=unmapped(WPL_FILE), xml_file=wpl_xml, ndjson_dir=unmapped(wpl_dir), root_tag=unmapped(WPL_ROOT))
-    # load_bq.map(name_bag=unmapped(wpl_dir), path_bag=wpl_mapped, schema_bag=unmapped(schema["wpl"]))
-
-    print(CONFIG)
+    wpl_xml, wpl_dir = create_xml_list.run(WPL_FILE)
+    wpl_mapped = create_ndjson.map(bag_file=unmapped(WPL_FILE), xml_file=wpl_xml, ndjson_dir=unmapped(wpl_dir), root_tag=unmapped(WPL_ROOT))
+    load_bq.map(name_bag=unmapped(wpl_dir), path_bag=wpl_mapped, schema_bag=unmapped(schema["wpl"]))
 
     num_xml, num_dir = create_xml_list.run(NUM_FILE)
     num_mapped = create_ndjson.map(bag_file=unmapped(NUM_FILE), xml_file=num_xml, ndjson_dir=unmapped(num_dir), root_tag=unmapped(NUM_ROOT))
