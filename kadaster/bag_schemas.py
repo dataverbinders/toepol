@@ -69,39 +69,21 @@ schema = dict(
             ]),
     ],
     opr=[
-        bigquery.SchemaField("identificatie", "integer", mode="required"),
-        bigquery.SchemaField("aanduidingRecordInactief", "string", mode="nullable"),
-        bigquery.SchemaField("aanduidingRecordCorrectie", "integer", mode="nullable"),
-        bigquery.SchemaField("openbareRuimteNaam", "string", mode="nullable"),
-        bigquery.SchemaField("officieel", "string", mode="nullable"),
-        bigquery.SchemaField(
-            "tijdvakgeldigheid",
-            "record",
-            fields=[
-                bigquery.SchemaField("begindatumTijdvakGeldigheid", "integer", mode="NULLABLE"),
-                bigquery.SchemaField("einddatumTijdvakGeldigheid", "integer", mode="NULLABLE"),
-            ],
-        ),
-        bigquery.SchemaField("inOnderzoek", "string", mode="nullable"),
-        bigquery.SchemaField("openbareRuimteType", "string", mode="nullable"),
-        bigquery.SchemaField(
-            "bron",
-            "record",
-            fields=[
-                bigquery.SchemaField("documentdatum", "integer", mode="NULLABLE"),
-                bigquery.SchemaField("documentnummer", "string", mode="NULLABLE"),
-            ],
-        ),
-        bigquery.SchemaField("openbareRuimteStatus", "string", mode="nullable"),
-        bigquery.SchemaField(
-            "gerelateerdeWoonplaats",
-            "record",
-            fields=[
-                bigquery.SchemaField("identificatie", "integer", mode="NULLABLE"),
-            ],
-        ),
-        bigquery.SchemaField("VerkorteOpenbareRuimteNaam", "string", mode="nullable"),
-    ],
+        bigquery.SchemaField("identificatie", "string", mode="required",
+                             description=""),
+        bigquery.SchemaField("naam", "string", mode="required",
+                             description=""),
+        bigquery.SchemaField("type", "string", mode="required",
+                             description=""),
+        bigquery.SchemaField("status", "string", mode="required",
+                             description=""),
+        bigquery.SchemaField("geconstateerd", "string", mode="required",
+                             description=""),
+        bigquery.SchemaField("documentdatum", "date", mode="required",
+                             description=""),
+        bigquery.SchemaField("woonplaats_identificatie", "string",
+                             mode="nullable", description=""),
+   ],
     num=[
         bigquery.SchemaField("identificatie", "string", mode="required", description="De unieke aanduiding van een nummeraanduiding."),
         bigquery.SchemaField("huisnummer", "integer", mode="nullable", description="Een door of namens het gemeentebestuur ten aanzienvan een adresseerbaar object toegekende nummering."),
@@ -140,312 +122,281 @@ schema = dict(
         ]),
     ],
     lig=[
+        bigquery.SchemaField("identificatie",
+                             "string",
+                             mode="required",
+                             description=""),
+        bigquery.SchemaField("status",
+                             "string",
+                             mode="required",
+                             description=""),
         bigquery.SchemaField(
-            "identificatie",
-            "integer",
-            mode="required"),
-        bigquery.SchemaField(
-            "aanduidingRecordInactief",
+            "geometrie",
             "string",
-            mode="nullable"),
-        bigquery.SchemaField(
-            "aanduidingRecordCorrectie",
-            "integer",
-            mode="nullable"),
-        bigquery.SchemaField(
-            "officieel",
-            "string",
-            mode="nullable"),
-        bigquery.SchemaField(
-            "ligplaatsStatus",
-            "string",
-            mode="nullable"),
-        bigquery.SchemaField(
-            "ligplaatsGeometrie",
-            "record",
+            mode="required",
+            description="",
             fields=[
-                bigquery.SchemaField(
-                    "Polygon",
-                    "record",
-                    mode="NULLABLE",
-                    fields=[
-                        bigquery.SchemaField(
-                            "interior",
-                            "record",
-                            mode="repeated",
-                            fields=[
-                                bigquery.SchemaField(
-                                    "LinearRing",
-                                    "record",
-                                    mode="NULLABLE",
-                                    fields=[
-                                        bigquery.SchemaField(
-                                            "posList",
-                                            "string",
-                                            mode="NULLABLE"),
-                                    ]),
-                        ]),
-                        bigquery.SchemaField(
-                            "exterior",
-                            "record",
-                            mode="NULLABLE",
-                            fields=[
-                                bigquery.SchemaField(
-                                    "LinearRing",
-                                    "record",
-                                    mode="NULLABLE",
-                                    fields=[
-                                        bigquery.SchemaField(
-                                            "posList",
-                                            "string",
-                                            mode="NULLABLE"),
-                                    ]),
+                bigquery.SchemaField("vlak", "record", mode="nullable", fields=[
+                    bigquery.SchemaField("Polygon", "record", mode="NULLABLE", fields=[
+                        bigquery.SchemaField("interior", "record", mode="NULLABLE", fields=[
+                            bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
+                                bigquery.SchemaField("posList", "string", mode="NULLABLE"),
                             ]),
+                        ]),
+                        bigquery.SchemaField("exterior", "record", mode="NULLABLE", fields=[
+                            bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
+                                bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                            ]),
+                        ]),
+                    ]),
                 ]),
-            ]),
-        bigquery.SchemaField(
-            "tijdvakgeldigheid",
-            "record",
-            fields=[
-                bigquery.SchemaField(
-                    "begindatumTijdvakGeldigheid",
-                    "integer",
-                    mode="NULLABLE"),
-                bigquery.SchemaField(
-                    "einddatumTijdvakGeldigheid",
-                    "integer",
-                    mode="NULLABLE"),
+                bigquery.SchemaField("multivlak", "record", mode="nullable", fields=[
+                    bigquery.SchemaField("MultiSurface", "record", mode="nullable", fields=[
+                        bigquery.SchemaField("surfaceMember", "record", mode="repeated", fields=[
+                            bigquery.SchemaField("Polygon", "record", mode="nullable", fields=[
+                                bigquery.SchemaField("interior", "record", mode="repeated", fields=[
+                                    bigquery.SchemaField("linearRing", "record", mode="nullable", fields=[
+                                        bigquery.SchemaField("posList", "string", mode="nullable"),
+                                    ]),
+                                ]),
+                                bigquery.SchemaField("exterior", "record", mode="repeated", fields=[
+                                    bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
+                                        bigquery.SchemaField("posList", "string", mode="nullable"),
+                                    ]),
+                                ]),
+                            ]),
+                        ]),
+                    ]),
+                ]),
             ],
         ),
-        bigquery.SchemaField(
-            "inOnderzoek",
-            "string",
-            mode="nullable"),
-        bigquery.SchemaField(
-            "bron",
-            "record",
-            fields=[
-                bigquery.SchemaField(
-                    "documentdatum",
-                    "integer",
-                    mode="NULLABLE"),
-                bigquery.SchemaField(
-                    "documentnummer",
-                    "string",
-                    mode="NULLABLE"),
-            ],
-        ),
-        bigquery.SchemaField(
-            "gerelateerdeAdressen",
-            "record",
-            fields=[
-                bigquery.SchemaField(
-                    "hoofdadres",
-                    "record",
-                    fields=[
-                        bigquery.SchemaField(
-                            "identificatie",
-                            "integer",
-                            mode="NULLABLE"),
-                    ]
-                ),
-                bigquery.SchemaField(
-                    "nevenadres",
-                    "record",
-                    mode="repeated",
-                    fields=[
-                        bigquery.SchemaField(
-                            "identificatie",
-                            "integer",
-                            mode="NULLABLE"),
-                        ]
-                ),
-            ]
-        ),
+        bigquery.SchemaField("documentdatum",
+                             "string",
+                             mode="nullable",
+                             description=""),
+        bigquery.SchemaField("documentnummer",
+                             "string",
+                             mode="nullable",
+                             description=""),
+        bigquery.SchemaField("hoofdadres",
+                             "string",
+                             mode="required",
+                             description="")
     ],
     sta=[
-        bigquery.SchemaField("identificatie", "integer", mode="required"),
-        bigquery.SchemaField("aanduidingRecordInactief", "string", mode="nullable"),
-        bigquery.SchemaField("aanduidingRecordCorrectie", "integer", mode="nullable"),
-        bigquery.SchemaField("officieel", "string", mode="nullable"),
-        bigquery.SchemaField("standplaatsStatus", "string", mode="nullable"),
+        bigquery.SchemaField('identificatie',
+                             'string',
+                             mode='required',
+                             description=''),
+        bigquery.SchemaField('status',
+                             'string',
+                             mode='required',
+                             description=''),
         bigquery.SchemaField(
-            "standplaatsGeometrie",
-            "record",
+            'geometrie',
+            'string',
+            mode='required',
+            description='',
             fields=[
-                bigquery.SchemaField("Polygon", "record", mode="NULLABLE", fields=[
-                    bigquery.SchemaField("interior", "record", mode="repeated", fields=[
-                        bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
-                            bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                bigquery.SchemaField("vlak", "record", mode="nullable", fields=[
+                    bigquery.SchemaField("Polygon", "record", mode="NULLABLE", fields=[
+                        bigquery.SchemaField("interior", "record", mode="NULLABLE", fields=[
+                            bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
+                                bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                            ]),
+                        ]),
+                        bigquery.SchemaField("exterior", "record", mode="NULLABLE", fields=[
+                            bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
+                                bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                            ]),
                         ]),
                     ]),
-                    bigquery.SchemaField("exterior", "record", mode="NULLABLE", fields=[
-                        bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
-                            bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                ]),
+                bigquery.SchemaField("multivlak", "record", mode="nullable", fields=[
+                    bigquery.SchemaField("MultiSurface", "record", mode="nullable", fields=[
+                        bigquery.SchemaField("surfaceMember", "record", mode="repeated", fields=[
+                            bigquery.SchemaField("Polygon", "record", mode="nullable", fields=[
+                                bigquery.SchemaField("interior", "record", mode="repeated", fields=[
+                                    bigquery.SchemaField("linearRing", "record", mode="nullable", fields=[
+                                        bigquery.SchemaField("posList", "string", mode="nullable"),
+                                    ]),
+                                ]),
+                                bigquery.SchemaField("exterior", "record", mode="repeated", fields=[
+                                    bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
+                                        bigquery.SchemaField("posList", "string", mode="nullable"),
+                                    ]),
+                                ]),
+                            ]),
                         ]),
                     ]),
                 ]),
             ]),
-        bigquery.SchemaField(
-            "tijdvakgeldigheid",
-            "record",
-            fields=[
-                bigquery.SchemaField("begindatumTijdvakGeldigheid", "integer", mode="NULLABLE"),
-                bigquery.SchemaField("einddatumTijdvakGeldigheid", "integer", mode="NULLABLE"),
-            ],
-        ),
-        bigquery.SchemaField("inOnderzoek", "string", mode="nullable"),
-        bigquery.SchemaField(
-            "bron",
-            "record",
-            fields=[
-                bigquery.SchemaField("documentdatum", "integer", mode="NULLABLE"),
-                bigquery.SchemaField("documentnummer", "string", mode="NULLABLE"),
-            ],
-        ),
-        bigquery.SchemaField(
-            "gerelateerdeAdressen",
-            "record",
-            fields=[
-                bigquery.SchemaField(
-                    "hoofdadres",
-                    "record",
-                    fields=[
-                        bigquery.SchemaField("identificatie", "integer", mode="NULLABLE"),
-                    ]
-                ),
-                bigquery.SchemaField(
-                    "nevenadres",
-                    "record",
-                    mode="repeated",
-                    fields=[
-                        bigquery.SchemaField("identificatie", "integer", mode="NULLABLE"),
-                    ]
-                ),
-            ],
-        ),
+        bigquery.SchemaField('geconstateerd',
+                             'string',
+                             mode='required',
+                             description=''),
+        bigquery.SchemaField('documentdatum',
+                             'string',
+                             mode='required',
+                             description=''),
+        bigquery.SchemaField('documentnummer',
+                             'string',
+                             mode='required',
+                             description=''),
+        bigquery.SchemaField('hoofdadres',
+                             'string',
+                             mode='nullable',
+                             description=''),
+        bigquery.SchemaField('nevenadres',
+                             'string',
+                             mode='nullable',
+                             description='')
     ],
     pnd=[
-        bigquery.SchemaField("identificatie", "integer", mode="required"),
-        bigquery.SchemaField("aanduidingRecordInactief", "string", mode="nullable"),
-        bigquery.SchemaField("aanduidingRecordCorrectie", "integer", mode="nullable"),
-        bigquery.SchemaField("officieel", "string", mode="nullable"),
+        bigquery.SchemaField('identificatie',
+                             'string',
+                             mode='required',
+                             description=''),
         bigquery.SchemaField(
-            "pandGeometrie",
-            "record",
+            'geometrie',
+            'string',
+            mode='required',
+            description='',
             fields=[
-                bigquery.SchemaField("Polygon", "record", mode="NULLABLE", fields=[
-                    bigquery.SchemaField("interior", "record", mode="repeated", fields=[
-                        bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
-                            bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                bigquery.SchemaField("vlak", "record", mode="nullable", fields=[
+                    bigquery.SchemaField("Polygon", "record", mode="NULLABLE", fields=[
+                        bigquery.SchemaField("interior", "record", mode="NULLABLE", fields=[
+                            bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
+                                bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                            ]),
+                        ]),
+                        bigquery.SchemaField("exterior", "record", mode="NULLABLE", fields=[
+                            bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
+                                bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                            ]),
                         ]),
                     ]),
-                    bigquery.SchemaField("exterior", "record", mode="NULLABLE", fields=[
-                        bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
-                            bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                ]),
+                bigquery.SchemaField("multivlak", "record", mode="nullable", fields=[
+                    bigquery.SchemaField("MultiSurface", "record", mode="nullable", fields=[
+                        bigquery.SchemaField("surfaceMember", "record", mode="repeated", fields=[
+                            bigquery.SchemaField("Polygon", "record", mode="nullable", fields=[
+                                bigquery.SchemaField("interior", "record", mode="repeated", fields=[
+                                    bigquery.SchemaField("linearRing", "record", mode="nullable", fields=[
+                                        bigquery.SchemaField("posList", "string", mode="nullable"),
+                                    ]),
+                                ]),
+                                bigquery.SchemaField("exterior", "record", mode="repeated", fields=[
+                                    bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
+                                        bigquery.SchemaField("posList", "string", mode="nullable"),
+                                    ]),
+                                ]),
+                            ]),
                         ]),
                     ]),
                 ]),
             ]),
-        bigquery.SchemaField("bouwjaar", "integer", mode="nullable"),
-        bigquery.SchemaField("pandstatus", "string", mode="nullable"),
-        bigquery.SchemaField(
-            "tijdvakgeldigheid",
-            "record",
-            fields=[
-                bigquery.SchemaField("begindatumTijdvakGeldigheid", "integer", mode="NULLABLE"),
-                bigquery.SchemaField("einddatumTijdvakGeldigheid", "integer", mode="NULLABLE"),
-            ],
-        ),
-        bigquery.SchemaField("inOnderzoek", "string", mode="nullable"),
-        bigquery.SchemaField(
-            "bron",
-            "record",
-            fields=[
-                bigquery.SchemaField("documentdatum", "integer", mode="NULLABLE"),
-                bigquery.SchemaField("documentnummer", "string", mode="NULLABLE"),
-            ],
-        ),
+        bigquery.SchemaField('oorspronkelijk_bouwjaar',
+                             'string',
+                             mode='required',
+                             description=''),
+        bigquery.SchemaField('status',
+                             'string', mode='required',
+                             description=''),
+        bigquery.SchemaField('geconstateerd',
+                             'string', mode='required',
+                             description=''),
+        bigquery.SchemaField('documentdatum',
+                             'date',
+                             mode='required',
+                             description=''),
+        bigquery.SchemaField('documentnummer',
+                             'string',
+                             mode='nullable',
+                             description='')
+
     ],
     vbo=[
-        bigquery.SchemaField("identificatie", "integer", mode="required"),
-        bigquery.SchemaField("aanduidingRecordInactief", "string", mode="nullable"),
-        bigquery.SchemaField("aanduidingRecordCorrectie", "integer", mode="nullable"),
-        bigquery.SchemaField("officieel", "string", mode="nullable"),
+        bigquery.SchemaField('identificatie',
+                             'string',
+                             mode='required',
+                             description=''),
         bigquery.SchemaField(
-            "verblijfsobjectGeometrie",
-            "record",
+            'geometrie',
+            'string',
+            mode='required',
+            description='',
             fields=[
-                bigquery.SchemaField("Point", "record", mode="NULLABLE", fields=[
-                    bigquery.SchemaField("pos", "string", mode="nullable"),
-                ]),
-                bigquery.SchemaField("Polygon", "record", mode="NULLABLE", fields=[
-                    bigquery.SchemaField("interior", "record", mode="repeated", fields=[
-                        bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
-                            bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                bigquery.SchemaField("vlak", "record", mode="nullable", fields=[
+                    bigquery.SchemaField("Polygon", "record", mode="NULLABLE", fields=[
+                        bigquery.SchemaField("interior", "record", mode="NULLABLE", fields=[
+                            bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
+                                bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                            ]),
+                        ]),
+                        bigquery.SchemaField("exterior", "record", mode="NULLABLE", fields=[
+                            bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
+                                bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                            ]),
                         ]),
                     ]),
-                    bigquery.SchemaField("exterior", "record", mode="NULLABLE", fields=[
-                        bigquery.SchemaField("LinearRing", "record", mode="NULLABLE", fields=[
-                            bigquery.SchemaField("posList", "string", mode="NULLABLE"),
+                ]),
+                bigquery.SchemaField("multivlak", "record", mode="nullable", fields=[
+                    bigquery.SchemaField("MultiSurface", "record", mode="nullable", fields=[
+                        bigquery.SchemaField("surfaceMember", "record", mode="repeated", fields=[
+                            bigquery.SchemaField("Polygon", "record", mode="nullable", fields=[
+                                bigquery.SchemaField("interior", "record", mode="repeated", fields=[
+                                    bigquery.SchemaField("linearRing", "record", mode="nullable", fields=[
+                                        bigquery.SchemaField("posList", "string", mode="nullable"),
+                                    ]),
+                                ]),
+                                bigquery.SchemaField("exterior", "record", mode="repeated", fields=[
+                                    bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
+                                        bigquery.SchemaField("posList", "string", mode="nullable"),
+                                    ]),
+                                ]),
+                            ]),
                         ]),
                     ]),
                 ]),
             ]),
-        # bigquery.SchemaField("gebruiksdoelVerblijfsobject", "string", mode="repeated"),
-        bigquery.SchemaField(
-            "gebruiksdoelVerblijfsobject",
-            "record",
-            mode="repeated",
-            fields=[
-                bigquery.SchemaField("type", "string", mode="NULLABLE"),
-            ]),
-        bigquery.SchemaField("oppervlakteVerblijfsobject", "integer", mode="nullable"),
-        bigquery.SchemaField("verblijfsobjectStatus", "string", mode="nullable"),
-        bigquery.SchemaField(
-            "tijdvakgeldigheid",
-            "record",
-            fields=[
-                bigquery.SchemaField("begindatumTijdvakGeldigheid", "integer", mode="NULLABLE"),
-                bigquery.SchemaField("einddatumTijdvakGeldigheid", "integer", mode="NULLABLE"),
-            ],
-        ),
-        bigquery.SchemaField("inOnderzoek", "string", mode="nullable"),
-        bigquery.SchemaField(
-            "bron",
-            "record",
-            fields=[
-                bigquery.SchemaField("documentdatum", "integer", mode="NULLABLE"),
-                bigquery.SchemaField("documentnummer", "string", mode="NULLABLE"),
-            ],
-        ),
-        bigquery.SchemaField(
-            "gerelateerdPand",
-            "record",
-            fields=[
-                bigquery.SchemaField("identificatie", "integer", mode="NULLABLE"),
-            ],
-        ),
-        bigquery.SchemaField(
-            "gerelateerdeAdressen",
-            "record",
-            fields=[
-                bigquery.SchemaField(
-                    "hoofdadres",
-                    "record",
-                    fields=[
-                        bigquery.SchemaField("identificatie", "integer", mode="NULLABLE"),
-                    ]
-                ),
-                bigquery.SchemaField(
-                    "nevenadres",
-                    "record",
-                    mode="repeated",
-                    fields=[
-                        bigquery.SchemaField("identificatie", "integer", mode="NULLABLE"),
-                    ]
-                ),
-            ],
-        ),
-    ]
+        bigquery.SchemaField('gebruiksdoel',
+                             'string',
+                             mode='nullable',
+                             description=''),
+        bigquery.SchemaField('oppervlakte',
+                             'int64',
+                             mode='required',
+                             description=''),
+        bigquery.SchemaField('status',
+                             'string',
+                             mode='required',
+                             description=''),
+        bigquery.SchemaField('geconstateerd',
+                             'string',
+                             mode='required',
+                             description=''),
+        bigquery.SchemaField('documentdatum',
+                             'string',
+                             mode='required',
+                             description=''),
+        bigquery.SchemaField('documentnummer',
+                             'string',
+                             mode='required',
+                             description=''),
+        bigquery.SchemaField('hoofdadres',
+                             'string',
+                             mode='nullable',
+                             description=''),
+        bigquery.SchemaField('nevenadres',
+                             'string',
+                             mode='nullable',
+                             description=''),
+        bigquery.SchemaField('pand_identificatie',
+                             'string',
+                             mode='required',
+                             description='')
+
+    ],
+
 )
