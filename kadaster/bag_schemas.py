@@ -4,15 +4,15 @@ schema = dict(
     wpl=[
         bigquery.SchemaField("identificatie", "string", mode="required", description="De unieke aanduiding van een woonplaats, zoals opgenomen in de landelijke woonplaatsentabel."),
         bigquery.SchemaField("naam", "string", mode="nullable", description="De benaming van een door het gemeentebestuuraangewezen woonplaats."),
-        bigquery.SchemaField("geometrie", "record", mode="repeated", description="De tweedimensionale geometrische representatie van het vlak dat wordt gevormd door de omtrekken van eenwoonplaats.", fields=[
+        bigquery.SchemaField("geometrie", "record", mode="nullable", description="De tweedimensionale geometrische representatie van het vlak dat wordt gevormd door de omtrekken van eenwoonplaats.", fields=[
                 bigquery.SchemaField("vlak","record", mode="nullable", fields=[
                     bigquery.SchemaField("Polygon", "record", mode="nullable", fields=[
-                        bigquery.SchemaField("interior", "record", mode="nullable", fields=[
+                        bigquery.SchemaField("interior", "record", mode="repeated", fields=[
                             bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
                                 bigquery.SchemaField("posList", "string", mode="nullable"),
                             ]),
                         ]),
-                        bigquery.SchemaField("exterior", "record", mode="nullable", fields=[
+                        bigquery.SchemaField("exterior", "record", mode="repeated", fields=[
                             bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
                                 bigquery.SchemaField("posList", "string", mode="nullable"),
                             ]),
@@ -130,40 +130,20 @@ schema = dict(
     pnd=[
         bigquery.SchemaField('identificatie', 'string', mode='required', description='De unieke aanduiding van een pand.'),
         bigquery.SchemaField('geometrie', 'record', mode='required', description='De minimaal tweedimensionale geometrische representatie van het bovenzicht van de omtrekken van een pand.', fields=[
-            bigquery.SchemaField("vlak", "record", mode="nullable", fields=[
-                bigquery.SchemaField("Polygon", "record", mode="nullable", fields=[
-                    bigquery.SchemaField("interior", "record", mode="nullable", fields=[
-                        bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
-                            bigquery.SchemaField("posList", "string", mode="nullable"),
-                        ]),
-                    ]),
-                    bigquery.SchemaField("exterior", "record", mode="nullable", fields=[
-                        bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
-                            bigquery.SchemaField("posList", "string", mode="nullable"),
-                        ]),
+            bigquery.SchemaField("Polygon", "record", mode="nullable", fields=[
+                bigquery.SchemaField("interior", "record", mode="repeated", fields=[
+                    bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
+                        bigquery.SchemaField("posList", "string", mode="nullable"),
                     ]),
                 ]),
-            ]),
-            bigquery.SchemaField("multivlak", "record", mode="nullable", fields=[
-                bigquery.SchemaField("MultiSurface", "record", mode="nullable", fields=[
-                    bigquery.SchemaField("surfaceMember", "record", mode="repeated", fields=[
-                        bigquery.SchemaField("Polygon", "record", mode="nullable", fields=[
-                            bigquery.SchemaField("interior", "record", mode="repeated", fields=[
-                                bigquery.SchemaField("linearRing", "record", mode="nullable", fields=[
-                                    bigquery.SchemaField("posList", "string", mode="nullable"),
-                                ]),
-                            ]),
-                            bigquery.SchemaField("exterior", "record", mode="repeated", fields=[
-                                bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
-                                    bigquery.SchemaField("posList", "string", mode="nullable"),
-                                ]),
-                            ]),
-                        ]),
+                bigquery.SchemaField("exterior", "record", mode="repeated", fields=[
+                    bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
+                        bigquery.SchemaField("posList", "string", mode="nullable"),
                     ]),
                 ]),
             ]),
         ]),
-        bigquery.SchemaField('oorspronkelijk_bouwjaar', 'FLOAT64', mode='required', description='De aanduiding van het jaar waarin een pand oorspronkelijk als bouwkundig gereed is of zal worden opgeleverd.'),
+        bigquery.SchemaField('oorspronkelijkBouwjaar', 'FLOAT64', mode='required', description='De aanduiding van het jaar waarin een pand oorspronkelijk als bouwkundig gereed is of zal worden opgeleverd.'),
         bigquery.SchemaField('status', 'string', mode='required', description='De fase van de levenscyclus van een pand, waarin hetbetreffende pand zich bevindt.'),
         bigquery.SchemaField('geconstateerd', 'string', mode='required', description='Een aanduiding waarmee kan worden aangegeven dat een pand in de registratie is opgenomen als gevolg van een feitelijke constatering, zonder dat er op het moment van opname sprake was van een regulier brondocument voor deze opname.'),
         bigquery.SchemaField('documentdatum', 'date', mode='required', description='De datum waarop het brondocument is vastgesteld, opbasis waarvan een opname, mutatie of een verwijderingvan gegevens ten aanzien van een pand heeft plaatsgevonden.'),
@@ -187,7 +167,12 @@ schema = dict(
     ],
     vbo=[
         bigquery.SchemaField('identificatie', 'string', mode='required', description="De unieke aanduiding van een verblijfsobject."),
-        bigquery.SchemaField('geometrie', 'record', mode='required', description="De minimaal tweedimensionale geometrische representatie van een verblijfsobject.", fields=[
+        bigquery.SchemaField('geometrie', 'record', mode='required', description='De minimaal tweedimensionale geometrische representatie van een verblijfsobject.', fields=[
+            bigquery.SchemaField('punt', 'record', mode='nullable', fields=[
+                bigquery.SchemaField('Point', 'record', mode='nullable', fields=[
+                    bigquery.SchemaField('pos', 'string', mode='nullable')
+                ]),
+            ]),
             bigquery.SchemaField("vlak", "record", mode="nullable", fields=[
                 bigquery.SchemaField("Polygon", "record", mode="nullable", fields=[
                     bigquery.SchemaField("interior", "record", mode="nullable", fields=[
@@ -221,14 +206,14 @@ schema = dict(
                 ]),
             ]),
         ]),
-        bigquery.SchemaField('gebruiksdoel', 'string', mode='nullable', description="Een categorisering van de gebruiksdoelen van het betreffende verblijfsobject, zoals dit formeel door de overheid als zodanig is toegestaan."),
+        bigquery.SchemaField('gebruiksdoel', 'string', mode='repeated', description="Een categorisering van de gebruiksdoelen van het betreffende verblijfsobject, zoals dit formeel door de overheid als zodanig is toegestaan."),
         bigquery.SchemaField('oppervlakte', 'integer', mode='required', description="De gebruiksoppervlakte van een verblijfsobject in gehele vierkante meters."),
         bigquery.SchemaField('status', 'string', mode='required', description="De fase van de levenscyclus van een verblijfsobject, waarin het betreffende verblijfsobject zich bevindt."),
         bigquery.SchemaField('geconstateerd', 'string', mode='required', description='Een aanduiding waarmee kan worden aangegeven dat een verblijfsobject in de registratie is opgenomen als gevolg van een feitelijke constatering, zonder dat er op het moment van opname sprake was van een regulier brondocument voor deze opname.'),
         bigquery.SchemaField('documentdatum', 'date', mode='required', description='De datum waarop het brondocument is vastgesteld, opbasis waarvan een opname, mutatie of een verwijderingvan gegevens ten aanzien van een verblijfsobject heeft plaatsgevonden.'),
         bigquery.SchemaField('documentnummer', 'string', mode='required', description='De unieke aanduiding van het brondocument op basiswaarvan een opname, mutatie of een verwijdering vangegevens ten aanzien van een object heeft plaatsgevonden, binnen een gemeente.'),
-        bigquery.SchemaField('maaktDeelUitVan', 'record', mode='nullable', description='Een verblijfsobject maakt onderdeel uit van een pand.', fields=[
-            bigquery.SchemaField('PandRef', 'string', mode='nullable', description=''),
+        bigquery.SchemaField('maaktDeelUitVan', 'record', mode='repeated', description='Een verblijfsobject maakt onderdeel uit van een pand.', fields=[
+            bigquery.SchemaField('PandRef', 'string', mode='repeated', description=''),
         ]),
         bigquery.SchemaField('heeftAlsHoofdadres', 'record', mode='nullable', description='', fields=[
             bigquery.SchemaField("NummeraanduidingRef", "string", mode="nullable"),
@@ -249,8 +234,8 @@ schema = dict(
                 ]),
             ]),
         ]),
-        bigquery.SchemaField('heeftAlsNevenadres', 'record', mode='nullable', description='', fields=[
-            bigquery.SchemaField("NummeraanduidingRef", "string", mode="nullable"),
+        bigquery.SchemaField('heeftAlsNevenadres', 'record', mode='repeated', description='', fields=[
+            bigquery.SchemaField("NummeraanduidingRef", "string", mode="repeated"),
         ]),
     ],
     lig=[
@@ -258,12 +243,12 @@ schema = dict(
         bigquery.SchemaField("status", "string", mode="required", description="De fase van de levenscyclus van een ligplaats, waarin de betreffende ligplaats zich bevindt."),
         bigquery.SchemaField("geometrie", "record", mode="required", description="De tweedimensionale geometrische representatie van de omtrekken van een ligplaats.", fields=[
             bigquery.SchemaField("Polygon", "record", mode="nullable", fields=[
-                    bigquery.SchemaField("interior", "record", mode="nullable", fields=[
+                    bigquery.SchemaField("interior", "record", mode="repeated", fields=[
                         bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
                             bigquery.SchemaField("posList", "string", mode="nullable"),
                         ]),
                     ]),
-                    bigquery.SchemaField("exterior", "record", mode="nullable", fields=[
+                    bigquery.SchemaField("exterior", "record", mode="repeated", fields=[
                         bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
                             bigquery.SchemaField("posList", "string", mode="nullable"),
                         ]),
@@ -293,8 +278,8 @@ schema = dict(
                 ]),
             ]),
         ]),
-        bigquery.SchemaField('heeftAlsNevenadres', 'record', mode='nullable', description='', fields=[
-            bigquery.SchemaField("NummeraanduidingRef", "string", mode="nullable"),
+        bigquery.SchemaField('heeftAlsNevenadres', 'record', mode='repeated', description='', fields=[
+            bigquery.SchemaField("NummeraanduidingRef", "string", mode="repeated"),
         ]),
     ],
     sta=[
@@ -307,7 +292,7 @@ schema = dict(
                         bigquery.SchemaField("posList", "string", mode="nullable"),
                     ]),
                 ]),
-                bigquery.SchemaField("exterior", "record", mode="nullable", fields=[
+                bigquery.SchemaField("exterior", "record", mode="repeated", fields=[
                     bigquery.SchemaField("LinearRing", "record", mode="nullable", fields=[
                         bigquery.SchemaField("posList", "string", mode="nullable"),
                     ]),
@@ -318,7 +303,7 @@ schema = dict(
         bigquery.SchemaField('documentdatum', 'date', mode='required', description='De datum waarop het brondocument is vastgesteld, opbasis waarvan een opname, mutatie of een verwijderingvan gegevens ten aanzien van een standplaats heeft plaatsgevonden.'),
         bigquery.SchemaField('documentnummer', 'string', mode='required', description='De unieke aanduiding van het brondocument op basiswaarvan een opname, mutatie of een verwijdering vangegevens ten aanzien van een standplaats heeft plaatsgevonden, binnen een gemeente.'),
         bigquery.SchemaField('heeftAlsHoofdadres', 'record', mode='nullable', description='', fields=[
-            bigquery.SchemaField("NummeraanduidingRef", "string", mode="repeated"),
+            bigquery.SchemaField("NummeraanduidingRef", "string", mode="nullable"),
         ]),
         bigquery.SchemaField("voorkomen", "record", fields=[
             bigquery.SchemaField("Voorkomen", "record", fields=[
@@ -336,7 +321,7 @@ schema = dict(
                 ]),
             ]),
         ]),
-        bigquery.SchemaField("heeftAlsNevenadres", "record", mode="nullable", description="", fields=[
+        bigquery.SchemaField("heeftAlsNevenadres", "record", mode="repeated", description="", fields=[
             bigquery.SchemaField("NummeraanduidingRef", "string", mode="repeated"),
         ]),
     ],
