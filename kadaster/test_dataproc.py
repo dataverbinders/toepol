@@ -34,7 +34,7 @@ object_map = {
     'LIG': 'Ligplaats',
     'NUM': 'Nummeraanduiding',
     'OPR': 'OpenbareRuimte',
-    'PND': 'PND',
+    'PND': 'Pand',
     'STA': 'Standplaats',
     'VBO': 'Verblijfsobject',
     'WPL': 'Woonplaats'
@@ -51,7 +51,15 @@ def init_spark_session():
         .getOrCreate()
 
     spark.conf.set('temporaryGcsBucket', TMP_BUCKET)
-    spark.conf.set('spark.sql.legacy.parquet.datetimeRebaseModeInRead', 'CORRECTED')
+    # spark.conf.set('spark.sql.legacy.parquet.datetimeRebaseModeInRead', 'CORRECTED')
+    # spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInRead", "LEGACY")
+    # spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInWrite", "LEGACY")
+    # spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInRead", "LEGACY")
+    # spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "LEGACY")
+    spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInRead", "CORRECTED")
+    spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInWrite", "CORRECTED")
+    spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInRead", "CORRECTED")
+    spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED")
     return spark
 
 
@@ -146,7 +154,10 @@ if __name__ == '__main__':
 
         key_no_digit = ''.join([c for c in key if not c.isdigit()])
         if key_no_digit in object_map.keys():
+            logging.info("Pickle Rick")
+
             files = [f'file://{x}' for x in val]
+            # files = [f'gs://{x}' for x in val]
             joined_files = ','.join(files)
 
             object_type = object_map[key_no_digit]

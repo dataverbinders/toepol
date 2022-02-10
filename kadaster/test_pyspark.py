@@ -1,88 +1,144 @@
-from pyspark.sql import SparkSession
-from pathlib import Path
-import zipfile
-import prefect
-from prefect import task, unmapped, Parameter, Flow
-from prefect.engine.results import PrefectResult
-from prefect.executors import LocalDaskExecutor
-from google.cloud import bigquery
-import pandas as pd
-from tabulate import tabulate
+import logging
+import os
+import sys
+from datetime import datetime
+from zipfile import ZipFile
 
-# GCP configurations
-GCP_PROJECT = "testenvironment-338811"
-DATASET = "kadaster"
+from pyspark.sql import SparkSession, functions
+from pyspark.sql.functions import col, date_format
 
-# BAG Configurations
-BAG_VERSION = "08012022"
+# logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    datefmt='%y/%m/%d %H:%M:%S',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
-# Relative paths for BAG files.
-WORK_DIR = Path.cwd() / 'kadaster' / 'bag'
-BAG = WORK_DIR / 'lvbag-extract-nl'
-TESTING = WORK_DIR / 'testing'
-OUTPUT_DIR = WORK_DIR / 'output'
 
-WPL_FILE = BAG / (f"9999WPL{BAG_VERSION}" + ".zip")
-OPR_FILE = BAG / (f"9999OPR{BAG_VERSION}" + ".zip")
-NUM_FILE = BAG / (f"9999NUM{BAG_VERSION}" + ".zip")
-PND_FILE = BAG / (f"9999PND{BAG_VERSION}" + ".zip")
-VBO_FILE = BAG / (f"9999VBO{BAG_VERSION}" + ".zip")
-LIG_FILE = BAG / (f"9999LIG{BAG_VERSION}" + ".zip")
-STA_FILE = BAG / (f"9999STA{BAG_VERSION}" + ".zip")
+# local files
+# CWD = os.getcwd()
+os.chdir("/Users/eddylim/Documents/work_repos/toepol/kadaster/bag/")
+CWD = os.getcwd()
+BAG_FILE = 'lvbag-extract-nl.zip'
+# DATA_DIR = f'{CWD}/data'
+DATA_DIR = f'{CWD}/output'
 
-# Root tags.
-WPL_ROOT = "Woonplaats"
-OPR_ROOT = "OpenbareRuimte"
-NUM_ROOT = "Nummeraanduiding"
-PND_ROOT = "Pand"
-VBO_ROOT = "Verblijfsobject"
-LIG_ROOT = "Ligplaats"
-STA_ROOT = "Standplaats"
 
-XPATH = ".//"
+# GCP
+TMP_BUCKET = 'temp-data-kadaster'
+DATASET = 'testing'
 
-def create_xml_list(zip_file):
-    """
-    Creates new directory and list of xml files from nested_zipfile which is in main BAG zipfile.
-    """
 
-    # new_dir = OUTPUT_DIR / zip_file.split(".")[0].split("/")[-1]
-    new_dir = OUTPUT_DIR / zip_file.name.split(".")[0]
-    new_dir.mkdir(exist_ok=True)
+# Object map
+object_map = {
+    'LIG': 'Ligplaats',
+    'NUM': 'Nummeraanduiding',
+    'OPR': 'OpenbareRuimte',
+    'PND': 'Pand',
+    'STA': 'Standplaats',
+    'VBO': 'Verblijfsobject',
+    'WPL': 'Woonplaats'
+}
 
-    # print(new_dir)
 
-    with zipfile.ZipFile(zip_file) as z:
-        return [f for f in z.namelist() if f.endswith(".xml")], new_dir
+def init_spark_session():
+    spark = SparkSession \
+        .builder \
+        .config('spark.jars.packages',
+                'com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.23.2,com.databricks:spark-xml_2.12:0.14.0') \
+        .config("spark.driver.memory", "2g") \
+        .getOrCreate()
 
-def reading_xml(bag_file, xml_file, output_dir):
-    spark = SparkSession.builder.config("spark.jars.packages",
-                "com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.23.2,com.databricks:spark-xml_2.12:0.14.0").getOrCreate()
+    spark.conf.set('temporaryGcsBucket', TMP_BUCKET)
+    # spark.conf.set('spark.sql.legacy.parquet.datetimeRebaseModeInRead', 'CORRECTED')
+    # spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInRead", "LEGACY")
+    # spark.conf.set("spark.sql.legacy.parquet.int96RebaseModeInWrite", "LEGACY")
+    spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInRead", "CORRECTED")
+    spark.conf.set("spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED")
 
-    # Read and extract zipfile.
-    zipfile.ZipFile(bag_file).extractall(output_dir)
+    return spark
 
-    paths = [(output_dir / i).as_posix() for i in xml_file]
 
-    path_changed = ",".join(paths)
-    # print(path_changed)
-    
-    # for i in paths:
-    #     df = spark.read.format("xml").option("rootTag", "sl-bag-extract:bagStand").option("rowTag", "sl-bag-extract:bagObject").load(i)
+def extract_bag_zip():
+    with ZipFile(BAG_FILE) as zip:
+        zip.extractall(DATA_DIR)
 
-    df = spark.read.format("xml").option("rootTag", "sl-bag-extract:bagStand").option("rowTag", "sl-bag-extract:bagObject").load(path_changed)
-    
-    
+
+def unzip_bag_data():
+    logging.info('Extracting BAG zip')
+    with ZipFile(BAG_FILE) as zip:
+        zipnames = [f for f in zip.namelist() if f.endswith('.zip')]
+        zip.extractall(DATA_DIR)
+
+    file_dict = {}
+    for name in zipnames:
+        logging.info(f'Extracting {name}')
+        with ZipFile(f"{DATA_DIR}/{name}") as zip:
+            zip.extractall(f"{DATA_DIR}/{name.split('.')[0]}")
+            files = [f"{DATA_DIR}/{name.split('.')[0]}/{f}" for f in zip.namelist() if f.endswith('.xml')]
+        file_dict[name.split('.')[0]] = files
+
+    return file_dict
+
+
+def process_table(object_type, files):
+    logging.info(f'Processing {object_type} xml files')
+
+    df = spark.read.format('xml') \
+        .option('rootTag', 'sl-bag-extract:bagStand') \
+        .option('rowTag', 'sl-bag-extract:bagObject') \
+        .option('path', files) \
+        .load()
+    df = df.select(f'Objecten:{object_type}.*')
+
+    print(df.count())
+
+    df.write.parquet(f"/Users/eddylim/{object_type}.parquet")
+
+    # df.write \
+    #     .format('bigquery') \
+    #     .option('table', f'{DATASET}.{object_type}') \
+    #     .save()
+
+
+def read_parquet(object_type):
+    logging.info(f'Reading {object_type} parquet files')
+
+    df = spark.read.parquet(f"/Users/eddylim/{object_type}.parquet")
+
+    # df_documentdatum = df.select('Objecten:documentdatum')
+    df_documentdatum = df.sort(col("Objecten:documentdatum").asc()).select("Objecten:documentdatum")
+
+    df_documentdatum.show(5)
+
     # print(df.count())
 
-    # df.write.format("bigquery").option("writeMethod", "direct").save(f"{GCP_PROJECT}.{DATASET}.{bag_file.name.split('.')[0]}")
-    # df.write.format("bigquery").option("writeMethod", "direct").option("temporaryGcsBucket","gcp_bucket").save(f"{GCP_PROJECT}.{DATASET}.{bag_file.name.split('.')[0]}")
-    # df.write.format("bigquery").option("table",f"{GCP_PROJECT}.{DATASET}.{bag_file.name.split('.')[0]}").option("temporaryGcsBucket", "gcp_bucket").mode('overwrite').save()
+if __name__ == '__main__':
+    spark = init_spark_session()
+    file_dict = unzip_bag_data()
 
+    # read xml files
+    for key, val in file_dict.items():
+        key_no_digit = ''.join([c for c in key if not c.isdigit()])
+        bag_root = key_no_digit.split("/")[-1]
+        print(bag_root)
 
-if __name__ == "__main__":
-    wpl_xml, wpl_dir = create_xml_list(WPL_FILE)
-    reading_xml(WPL_FILE, wpl_xml, wpl_dir)
+        # print("key:", key)
+        # print("val:", val)
 
-    # lig_xml, lig_dir = create_xml_list(PND_FILE)
-    # reading_xml(PND_FILE, lig_xml, lig_dir)
+        if bag_root in object_map.keys():
+            # files = [f'file://{x}' for x in val]
+            # joined_files = ','.join(files)
+
+            joined_files = ','.join(val)
+            # print(joined_files)
+
+            object_type = object_map[bag_root]
+            process_table(object_type, joined_files)
+        
+        # if bag_root in object_map.keys():
+        #     object_type = object_map[bag_root]
+        #     read_parquet(object_type)
