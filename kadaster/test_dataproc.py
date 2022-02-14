@@ -4,6 +4,7 @@ from os import listdir, remove
 from sys import stdout
 from zipfile import ZipFile
 
+import requests
 from pyspark.sql import SparkSession
 
 
@@ -18,8 +19,9 @@ logging.basicConfig(
 )
 
 
-# bag zip url
-BAG_URL = None
+# download
+BAG_URL = 'https://service.pdok.nl/kadaster/adressen/atom/v1_0/downloads/lvbag-extract-nl.zip'
+DOWNLOAD_BAG = True
 
 
 # local files
@@ -67,6 +69,12 @@ inonderzoek_map = {
     'IOVBO': 'KenmerkVerblijfsobjectInOnderzoek',
 }
 
+
+def download_bag_zip():
+    logging.info('Downloading bag file.')
+    r = requests.get(BAG_URL)
+    with open(BAG_FILE, 'wb') as f:
+        f.write(r.content)
 
 def init_spark_session():
     """
@@ -166,6 +174,9 @@ def process_table(object_type, files, root_tag, row_tag, select_tag):
         logging.warn(f'Unable to load {object_type} files.')
 
 if __name__ == '__main__':
+    if DOWNLOAD_BAG:
+        download_bag_zip()
+
     spark = init_spark_session()
     file_dict = unzip_bag_data()
 
