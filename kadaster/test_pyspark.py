@@ -3,9 +3,12 @@ import os
 import sys
 from datetime import datetime
 from zipfile import ZipFile
-
-from pyspark.sql import SparkSession, functions
-from pyspark.sql.functions import col, date_format
+import re
+from pyproj import Proj, transform
+from pyproj import Transformer
+from pyspark import SQLContext
+from pyspark.sql import SparkSession, functions, Window
+from pyspark.sql.functions import col, monotonically_increasing_id, row_number
 
 # logging
 logging.basicConfig(
@@ -90,13 +93,91 @@ def process_table(object_type, files):
     df = spark.read.format('xml') \
         .option('rootTag', 'sl-bag-extract:bagStand') \
         .option('rowTag', 'sl-bag-extract:bagObject') \
+        .option('dateFormat', 'ISO_LOCAL_DATE') \
         .option('path', files) \
         .load()
     df = df.select(f'Objecten:{object_type}.*')
 
     print(df.count())
 
-    df.write.parquet(f"/Users/eddylim/{object_type}.parquet")
+    df.printSchema()
+
+    # if "objecten:geomertie" in (name.lower() for name in df.columms()):
+    #     print(df["Objecten:geomertie"])
+
+    df.select("Objecten:geometrie.Objecten:vlak.gml:Polygon.gml:exterior.gml:LinearRing.gml:posList._VALUE").show(1)
+    
+    if "Objecten:geometrie" in df.columns:
+        geo_list = df.select("Objecten:geometrie.Objecten:vlak.gml:Polygon.gml:exterior.gml:LinearRing.gml:posList._VALUE").rdd.flatMap(lambda x: x).collect()
+    
+    print(len(geo_list))
+    
+    new_coords = []
+    
+    for i in geo_list:
+        tmp_list = []
+
+        if i is not None:
+            # Split the String in apris of coordinates.
+            for j in re.split('(\s?\d+\.\d+\s\d+\.\d+\s?)', i):
+                tmp_list2 = []
+                # Convert the captured coordinates seperately into float and save as nested list.
+                if j:
+                    for k in j.split():
+                        tmp_list2.append(float(k))
+                    tmp_list.append(tmp_list2)
+        
+        new_coords.append(tmp_list)
+    
+    inProj = Proj(init='epsg:28992') # Amersfoort / RD New -- Netherlands - Holland - Dutch
+    outProj = Proj(init='epsg:4326') # WGS 84 -- WGS84 - World Geodetic System 1984, used in GPS
+
+    transformer = Transformer.from_crs('epsg:28992', 'epsg:4326')
+
+    # print(len(new_coords))
+    # print(new_coords[0])
+    # print(new_coords[0][0])
+
+    new_coord_list = []
+    # list_tmp = []
+
+    # for i in new_coords[0]:
+    #     x1, y1 = i
+    #     # print(x1, y1)
+
+    #     x2,y2 = transform(inProj,outProj,x1,y1) # To epsg:4326
+    #     # print(y2, x2)
+
+    #     list_tmp.append(str(y2 ) + " " + str(x2))
+    
+    # coord_string = ", ".join(list_tmp)
+
+    # print(coord_string)
+
+    for i in new_coords:
+        list_tmp = []
+        for coords_pair in i:
+            x1, y1 = coords_pair
+            # print(x1, y1)
+
+            # x2, y2 = transform(inProj,outProj,x1,y1) # To epsg:4326
+            x2, y2 = transformer.transform(x1, y1) # To epsg:4326
+            # print(y2, x2)
+            list_tmp.append(str(x2) + " " + str(y2))
+        
+        coord_string = ", ".join(list_tmp)
+        print(coord_string)
+
+
+        new_coord_list.append(coord_string)
+    
+    print(len(new_coord_list))
+    # print(new_coord_list[0])
+
+
+
+
+    # df.write.parquet(f"/Users/eddylim/{object_type}.parquet")
 
     # df.write \
     #     .format('bigquery') \
