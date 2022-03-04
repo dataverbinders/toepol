@@ -1,31 +1,18 @@
-from os import getcwd, remove, listdir
+from os import listdir, remove
+from os.path import abspath
 from zipfile import ZipFile
 
 import prefect
 import requests
-from prefect import Flow, Parameter, mapped, resource_manager, task, unmapped
+from prefect import Flow, Parameter, mapped, resource_manager, task
 from prefect.executors import DaskExecutor
 from prefect.tasks.gcp.storage import GCSUpload
-
-
+from prefect.tasks.secrets import PrefectSecret
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import struct
 from shapely import geometry, wkt
 
 from pyproj import Transformer
-
-# BAG Download
-#  DOWNLOAD_BAG = False
-#  BAG_URL = 'https://service.pdok/nl/kadaster/adressen/atom/v1_0/downloads/lvbag-extract-nl.zip'
-
-
-# Local Files
-CWD = getcwd()
-BAG_FILE = f"{CWD}/lvbag-extract-nl.zip"
-DATA_DIR = f"{CWD}/data"
-
-
-# GCP
 
 
 # Object maps
@@ -62,20 +49,7 @@ class SparkCluster:
 
 
 @task(checkpoint=False)
-def init_spark() -> SparkSession:
-    spark = (
-        SparkSession.builder.appName("bag2gcs")
-        .config("spark.jars.packages", "com.databricks:spark-xml_2.12:0.14.0")
-        .getOrCreate()
-    )
-
-    spark.conf.set("spark.sql.parquet.datetimeRebaseModeInWrite", "CORRECTED")
-
-    return spark
-
-
-@task(checkpoint=False)
-def download_bag_zip(download_bag, bag_url, bag_file=BAG_FILE):
+def download_bag_zip(download_bag, bag_url, bag_file):
     if download_bag:
         r = requests.get(bag_url)
         with open(bag_file, "wb") as f:
@@ -89,7 +63,7 @@ def init_transformer():
 
 
 @task(nout=2)
-def unzip_bag_data(bag_file=BAG_FILE, data_dir=DATA_DIR):
+def unzip_bag_data(bag_file, data_dir):
     with ZipFile(bag_file) as zip:
         zipnames = [f for f in zip.namelist() if f.endswith(".zip")]
         zip.extractall(data_dir)
@@ -100,7 +74,6 @@ def unzip_bag_data(bag_file=BAG_FILE, data_dir=DATA_DIR):
     for name in zipnames:
         key = "".join([c for c in name if not c.isdigit()]).split(".")[0]
         locations[key] = f"{data_dir}/{name}"
-    #  return locations, lev_doc
 
     file_dict = {}
     for name in zipnames:
@@ -108,10 +81,11 @@ def unzip_bag_data(bag_file=BAG_FILE, data_dir=DATA_DIR):
             target_folder = name.split(".")[0]
             zip.extractall(f"{data_dir}/{target_folder}")
             files = [
-                f"{DATA_DIR}/{target_folder}/{f}"
+                abspath(f"{data_dir}/{target_folder}/{f}")
                 for f in zip.namelist()
                 if f.endswith(".xml")
             ]
+            print(files)
 
         key = "".join([c for c in target_folder if not c.isdigit()])
         concat_files = ",".join(files)
@@ -120,21 +94,6 @@ def unzip_bag_data(bag_file=BAG_FILE, data_dir=DATA_DIR):
     return file_dict, lev_doc
 
 
-@task
-def unzip_sub_file(file, target_folder, data_dir=DATA_DIR):
-    with ZipFile(file) as zip:
-        zip.extractall(target_folder)
-        files = [
-            f"{target_folder}/{f}"
-            for f in zip.namelist()
-            if f.endswith(".xml")
-        ]
-    remove(file)
-    concat_files = ",".join(files)
-    return concat_files
-
-
-#  @task(checkpoint=False)
 def create_spark_df(spark, object_type, files):
     df = (
         spark.read.format("xml")
@@ -339,7 +298,6 @@ def convert_polygon(df, spark, transformer):
     return df
 
 
-#  @task(checkpoint=False)
 def convert_geometry(df, spark):
     if "Objecten:geometrie" not in df.columns:
         return df
@@ -374,8 +332,8 @@ def convert_geometry(df, spark):
 
 
 #  @task
-def store_df_as_parquet(df, object_type):
-    target_folder = f"{DATA_DIR}/{object_type}"
+def store_df_as_parquet(df, object_type, data_dir):
+    target_folder = f"{data_dir}/{object_type}"
     df.repartition(1).write.format("parquet").mode("overwrite").save(
         target_folder
     )
@@ -383,16 +341,22 @@ def store_df_as_parquet(df, object_type):
 
 
 @task
-def write_parquet_to_gcs(source_dir, bucket, folder):
-    print(source_dir)
+def write_parquet_to_gcs(
+    source_dir, object_name, gcp_credentials, bucket, folder
+):
     files = [f for f in listdir(source_dir) if f.endswith(".parquet")]
     file = files[0]
-    with open(f"{source_dir}/{file}", "r") as f:
-        print(f)
+    with open(f"{source_dir}/{file}", "rb") as f:
+        data = f.read()
+        GCSUpload(bucket=bucket).run(
+            data,
+            blob=f"{folder}/{object_name}.parquet",
+            credentials=gcp_credentials,
+        )
 
 
-@task(checkpoint=False)
-def process_data(spark, object_map, file_dict):
+@task(checkpoint=False, nout=2)
+def process_data(spark, object_map, file_dict, data_dir):
     parquet_files = []
     for key, val in object_map.items():
         logger.info(f"Creating {key} dataframe")
@@ -402,7 +366,7 @@ def process_data(spark, object_map, file_dict):
         df = convert_geometry(df, spark)
 
         logger.info(f"Writing {key} dataframe to disk")
-        parquet_file = store_df_as_parquet(df, val)
+        parquet_file = store_df_as_parquet(df, val, data_dir)
         parquet_files.append(parquet_file)
     return parquet_files
 
@@ -415,36 +379,45 @@ with Flow("bag2gcs") as flow:
     )
     DOWNLOAD_BAG = Parameter("download_bag", default=False)
 
+    # Local File Parameters
+    DATA_DIR = "data"
+    BAG_FILE = Parameter("bag_file", default="lvbag-extract-nl.zip")
+
     # GCS Parameters
-    GCP_PROJECT = Parameter("gcp_project", default="dataverbinders-dev")
     GCS_BUCKET = Parameter("gcs_bucket", default="dataverbinders-dev")
     GCS_FOLDER = Parameter("gcs_folder", default="kadaster/bag")
 
     logger = prefect.context.get("logger")
 
-    bag_file = download_bag_zip(DOWNLOAD_BAG, BAG_URL)
+    bag_file = download_bag_zip(DOWNLOAD_BAG, BAG_URL, BAG_FILE)
 
-    file_dict, lev_doc = unzip_bag_data(bag_file)
+    gcp_credentials = PrefectSecret("GCP_CREDENTIALS")
+
+    file_dict, lev_doc = unzip_bag_data(bag_file, DATA_DIR)
 
     with SparkCluster() as spark:
-        parquet_dirs = process_data(spark, object_map, file_dict)
+        parquet_dirs = process_data(spark, object_map, file_dict, DATA_DIR)
 
-    write_parquet_to_gcs(mapped(parquet_dirs), GCS_BUCKET, GCS_FOLDER)
+    write_parquet_to_gcs(
+        mapped(parquet_dirs),
+        mapped(list(object_map.values())),
+        gcp_credentials,
+        GCS_BUCKET,
+        GCS_FOLDER,
+    )
 
 
 if __name__ == "__main__":
-    #  gcs_uploader = GCSUpload('')
-#
-    #  flow.executor = DaskExecutor()
-    #  flow.register(
-        #  project_name='toepol',
-    #  )
+    flow.executor = DaskExecutor()
+    flow.register(
+        project_name="toepol",
+    )
 
     #################
     ### RUN LOCAL ###
     #################
 
-    params = {
-        "download_bag": 0,
-    }
-    flow.run(parameters=params)
+    #  params = {
+    #      "download_bag": False,
+    #  }
+    #  flow.run(parameters=params)
