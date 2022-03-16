@@ -1,4 +1,4 @@
-from google.cloud import dataproc_v1
+rom google.cloud import dataproc_v1
 from prefect import task
 
 
@@ -89,7 +89,7 @@ def stop_cluster(credentials, project_id, region, cluster_name, **kwargs):
 
 @task
 def submit_job_as_operation(
-    credentials, region, cluster_name, config, **kwargs
+    credentials, region, config, **kwargs
 ):
     client = dataproc_v1.JobControllerClient().from_service_account_info(
         credentials,
