@@ -1,5 +1,5 @@
 from google.cloud import dataproc_v1
-from prefect import Flow, task
+from prefect import task
 
 
 @task
@@ -83,5 +83,24 @@ def stop_cluster(credentials, project_id, region, cluster_name, **kwargs):
     operation = client.stop_cluster(request=request)
     print("Waiting for operation to complete...")
 
+    response = operation.result()
+    return response
+
+
+@task
+def submit_job_as_operation(
+    credentials, region, cluster_name, config, **kwargs
+):
+    client = dataproc_v1.JobControllerClient().from_service_account_info(
+        credentials,
+        client_options={
+            "api_endpoint": "{}-dataproc.googleapis.com:443".format(region)
+        },
+    )
+    job = dataproc_v1.Job(**config["job"])
+    request = dataproc_v1.SubmitJobRequest(
+        project_id=config["project_id"], region=region, job=job
+    )
+    operation = client.submit_job_as_operation(request=request)
     response = operation.result()
     return response
