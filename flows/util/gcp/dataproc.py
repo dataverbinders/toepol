@@ -1,4 +1,4 @@
-rom google.cloud import dataproc_v1
+from google.cloud import dataproc_v1
 from prefect import task
 
 
@@ -97,6 +97,7 @@ def submit_job_as_operation(
             "api_endpoint": "{}-dataproc.googleapis.com:443".format(region)
         },
     )
+
     job = dataproc_v1.Job(**config["job"])
     request = dataproc_v1.SubmitJobRequest(
         project_id=config["project_id"], region=region, job=job
