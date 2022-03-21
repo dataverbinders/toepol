@@ -3,7 +3,17 @@ from prefect import task
 
 
 @task
-def create_cluster(credentials, region, config, **kwargs):
+def create_cluster(credentials: dict, region: str, config: dict, **kwargs):
+    """Create a dataproc cluster.
+
+    :param credentials: the GCP credentials
+    :type credentials: dict
+    :param region: region to create the cluster in. example: 'europe-west4'
+    :type region: str
+    :param config: the configuration for the dataproc cluster
+    :type config: dict
+    :param kwargs: any additional parameters. This can be used to easily make this task depend on other tasks.
+    """
     client = dataproc_v1.ClusterControllerClient().from_service_account_info(
         credentials,
         client_options={
@@ -25,7 +35,17 @@ def create_cluster(credentials, region, config, **kwargs):
 
 
 @task
-def delete_cluster(credentials, region, config, **kwargs):
+def delete_cluster(credentials: dict, region: str, config: dict, **kwargs):
+    """Delete a dataproc cluster.
+
+    :param credentials: the GCP credentials
+    :type credentials: dict
+    :param region: region to create the cluster in. example: 'europe-west4'
+    :type region: str
+    :param config: the configuration for the dataproc cluster
+    :type config: dict
+    :param kwargs: any additional parameters. This can be used to easily make this task depend on other tasks.
+    """
     client = dataproc_v1.ClusterControllerClient().from_service_account_info(
         credentials,
         client_options={
@@ -45,7 +65,25 @@ def delete_cluster(credentials, region, config, **kwargs):
 
 
 @task
-def start_cluster(credentials, project_id, region, cluster_name, **kwargs):
+def start_cluster(
+    credentials: dict,
+    project_id: str,
+    region: str,
+    cluster_name: str,
+    **kwargs
+):
+    """Start a stopped dataproc cluster.
+
+    :param credentials: the GCP credentials
+    :type credentials: dict
+    :param project_id: project id
+    :type project_id: str
+    :param region: region the cluster exists in
+    :type region: str
+    :param cluster_name: name of the cluster
+    :type cluster_name: str
+    :param kwargs: any additional parameters. This can be used to easily make this task depend on other tasks.
+    """
     client = dataproc_v1.ClusterControllerClient().from_service_account_info(
         credentials,
         client_options={
@@ -66,7 +104,25 @@ def start_cluster(credentials, project_id, region, cluster_name, **kwargs):
 
 
 @task
-def stop_cluster(credentials, project_id, region, cluster_name, **kwargs):
+def stop_cluster(
+    credentials: dict,
+    project_id: str,
+    region: str,
+    cluster_name: str,
+    **kwargs
+):
+    """Stop a running dataproc cluster.
+
+    :param credentials: the GCP credentials
+    :type credentials: dict
+    :param project_id: project id
+    :type project_id: str
+    :param region: region the cluster exists in
+    :type region: str
+    :param cluster_name: name of the cluster
+    :type cluster_name: str
+    :param kwargs: any additional parameters. This can be used to easily make this task depend on other tasks.
+    """
     client = dataproc_v1.ClusterControllerClient().from_service_account_info(
         credentials,
         client_options={
@@ -88,9 +144,18 @@ def stop_cluster(credentials, project_id, region, cluster_name, **kwargs):
 
 
 @task
-def submit_job_as_operation(
-    credentials, region, config, **kwargs
-):
+def submit_job_as_operation(credentials: dict, region: str, config: dict, **kwargs):
+    """Submit a job as an operation.
+    This task only returns once the job is finished.
+
+    :param credentials:
+    :type credentials: dict
+    :param region:
+    :type region: str
+    :param config:
+    :type config: dict
+    :param kwargs:
+    """
     client = dataproc_v1.JobControllerClient().from_service_account_info(
         credentials,
         client_options={
