@@ -1,7 +1,9 @@
+from typing import List
+
 import prefect
 from prefect import Flow, Parameter, mapped, task
 from prefect.backend import get_key_value
-from prefect.executors import DaskExecutor
+from prefect.executors import LocalExecutor
 from prefect.run_configs import UniversalRun
 from prefect.schedules import Schedule
 from prefect.schedules.clocks import CronClock
@@ -17,7 +19,14 @@ def print_var(var):
 
 
 @task
-def add_archive_uris_to_config(config, uris):
+def add_archive_uris_to_config(config: dict, uris: List):
+    """add_archive_uris_to_config.
+
+    :param config: a dictionary containing the configuration for a dataproc job
+    :type config: dict
+    :param uris: a list of archives to be passed to the configuration
+    :type uris: List
+    """
     config["job"]["pyspark_job"]["archive_uris"] = uris
     return config
 
@@ -90,7 +99,7 @@ with Flow("bag2gcs_with_dataproc") as flow:
 
 
 if __name__ == "__main__":
-    flow.executor = DaskExecutor()
+    flow.executor = LocalExecutor()
     flow.run_config = UniversalRun(labels=["bag"])
 
     schedule = Schedule(clocks=[CronClock("0 3 8 * *")])
