@@ -1,12 +1,13 @@
 from os import listdir
 from os.path import abspath
+from typing import List
 from zipfile import ZipFile
+
 from google.cloud import storage
 from pyproj import Transformer
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.functions import struct
 from shapely import geometry, wkt
-
 
 # Object map
 object_map = {
@@ -21,6 +22,7 @@ object_map = {
 
 
 def init_spark_session():
+    """Initializes and returns a PySpark session."""
     spark = (
         SparkSession.builder.appName("bag2gcs").master("local").getOrCreate()
     )
@@ -33,11 +35,19 @@ def init_spark_session():
 
 
 def init_transformer():
+    """Initializes and returns a pyproj transformer."""
     transformer = Transformer.from_crs("epsg:28992", "epsg:4326")
     return transformer
 
 
-def unzip_subzip(file):
+def unzip_subzip(file: str) -> str:
+    """Unzips a bag 'sub zipfile' and returns a concatenation of the locations
+    of the extracted files..
+
+    :param file: the file to be extracted
+    :type file: str
+    :rtype: str
+    """
     with ZipFile(file) as zip:
         target_folder = file.split(".")[0]
         zip.extractall(f"data/{target_folder}")
@@ -51,7 +61,19 @@ def unzip_subzip(file):
     return concat_files
 
 
-def create_spark_df(spark, object_type, files):
+def create_spark_df(
+    spark: SparkSession, object_type: str, files: str
+) -> DataFrame:
+    """Given a string containing xml files, returns a Spark dataframe..
+
+    :param spark: a spark session
+    :type spark: SparkSession
+    :param object_type: the type of object in the given files. eg: 'Woonplaats'
+    :type object_type: str
+    :param files: a string containing a concatenation of the XML files
+    :type files: str
+    :rtype: DataFrame
+    """
     df = (
         spark.read.format("xml")
         .option("rootTag", "sl-bag-extract:bagStand")
@@ -63,19 +85,52 @@ def create_spark_df(spark, object_type, files):
     return df
 
 
-def transform_coords(x, y, transformer):
+def transform_coords(x: int, y: int, transformer: Transformer) -> List[int]:
+    """Transforms x and y coördinates from one projectino to the other based
+    on the given transformer
+
+    :param x: x-coördinate
+    :type x: int
+    :param y: y-coördinate
+    :type y: int
+    :param transformer: a pyproj transformer
+    :type transformer: Transformer
+    :rtype: List[int]
+    """
     x, y = transformer.transform(x, y)
     return [x, y]
 
 
-def convert_point(s: str, transformer):
-    x, y, _ = s.split()
+def convert_point(point: str, transformer: Transformer) -> geometry.Point:
+    """Converts a point in three dimensional space to a two dimensional point.
+    Also converts it to a different projection based on the provided
+    transformer..
+
+    :param point: a string containing three coördinates split by spaces
+    :type point: str
+    :param transformer: a pyproj transformer
+    :type transformer: Transformer
+    :rtype: geometry.Point
+    """
+    x, y, _ = point.split()
     x, y = transform_coords(x, y, transformer)
     p = wkt.dumps(geometry.Point(x, y))
     return p
 
 
-def create_linear_ring(positions: str, transformer, dimension: int = 2):
+def create_linear_ring(
+    positions: str, transformer: Transformer, dimension: int = 2
+) -> geometry.LinearRing:
+    """Creates a linear ring given a string of coördinates.
+
+    :param positions: a string of coördinates
+    :type positions: str
+    :param transformer: a pyproj transformer
+    :type transformer: Transformer
+    :param dimension: the dimension of the provided points
+    :type dimension: int
+    :rtype: geometry.LinearRing
+    """
     points_list = []
     s = positions.split()
     for i in range(0, len(s), dimension):
@@ -85,7 +140,20 @@ def create_linear_ring(positions: str, transformer, dimension: int = 2):
     return lr
 
 
-def convert_points(df, spark, transformer):
+def convert_points(
+    df: DataFrame, spark: SparkSession, transformer: Transformer
+) -> DataFrame:
+    """Given a Spark DataFrame with a column of containing points, it adds a
+    new column containing the points in WKT format.
+
+    :param df: a Spark DataFrame
+    :type df: DataFrame
+    :param spark: a SparkSession
+    :type spark: SparkSession
+    :param transformer: a pyproj transformer
+    :type transformer: Transformer
+    :rtype: DataFrame
+    """
     points = []
     for row in df.collect():
         id = row["Objecten:identificatie"]["_VALUE"]
@@ -112,7 +180,20 @@ def convert_points(df, spark, transformer):
     return df
 
 
-def convert_multivlak(df, spark, transformer):
+def convert_multivlak(
+    df: DataFrame, spark: SparkSession, transformer: Transformer
+) -> DataFrame:
+    """Given a Spark DataFrame with a column containing 'multivlak', add a
+    new column containing a multisurface in WKT format.
+
+    :param df: a Spark DataFrame
+    :type df: DataFrame
+    :param spark: a SparkSession
+    :type spark: SparkSession
+    :param transformer: a pyproj transformer
+    :type transformer: Transformer
+    :rtype: DataFrame
+    """
     new_multi_polygons = []
     for row in df.collect():
         id = row["Objecten:identificatie"]["_VALUE"]
@@ -166,7 +247,20 @@ def convert_multivlak(df, spark, transformer):
     return df
 
 
-def convert_vlak(df, spark, transformer):
+def convert_vlak(
+    df: DataFrame, spark: SparkSession, transformer: Transformer
+) -> DataFrame:
+    """Given a Spark DataFrame with a column containing 'vlak', add a
+    new column containing a surface in WKT format.
+
+    :param df: a Spark DataFrame
+    :type df: DataFrame
+    :param spark: a SparkSession
+    :type spark: SparkSession
+    :param transformer: a pyproj transformer
+    :type transformer: Transformer
+    :rtype: DataFrame
+    """
     new_polygons = []
     for row in df.collect():
         id = row["Objecten:identificatie"]["_VALUE"]
@@ -208,7 +302,20 @@ def convert_vlak(df, spark, transformer):
     return df
 
 
-def convert_polygon(df, spark, transformer):
+def convert_polygon(
+    df: DataFrame, spark: SparkSession, transformer: Transformer
+) -> DataFrame:
+    """Given a Spark DataFrame with a column containing 'polygon', add a new
+    column containing a polygon in WKT format.
+
+    :param df: a Spark DataFrame
+    :type df: DataFrame
+    :param spark: a SparkSession
+    :type spark: SparkSession
+    :param transformer: a pyproj transformer
+    :type transformer: Transformer
+    :rtype: DataFrame
+    """
     new_polygons = []
     for row in df.collect():
         id = row["Objecten:identificatie"]["_VALUE"]
@@ -255,7 +362,16 @@ def convert_polygon(df, spark, transformer):
     return df
 
 
-def convert_geometry(df, spark):
+def convert_geometry(df: DataFrame, spark: SparkSession) -> DataFrame:
+    """Checks if the provided DataFrame contains a geometry column, and if so
+    transforms it to the appropriate WKT format.
+
+    :param df: a Spark DataFrame
+    :type df: DataFrame
+    :param spark: a SparkSession
+    :type spark: SparkSession
+    :rtype: DataFrame
+    """
     if "Objecten:geometrie" not in df.columns:
         return df
 
@@ -288,7 +404,18 @@ def convert_geometry(df, spark):
     return df
 
 
-def store_df_as_parquet(df, object_type, data_dir):
+def store_df_as_parquet(df: DataFrame, object_type: str, data_dir: str) -> str:
+    """Stores a Spark DataFrame as a .parquet file.
+    Returns the folder the .parquet file is located in..
+
+    :param df: a Spark DataFrame
+    :type df: DataFrame
+    :param object_type: the object type corresponding to the DataFrame. Used as the directory name of the .parquet file
+    :type object_type: str
+    :param data_dir: directory to store the file in
+    :type data_dir: str
+    :rtype: str
+    """
     target_folder = f"{data_dir}/{object_type}"
     df.repartition(1).write.format("parquet").mode("overwrite").save(
         target_folder
@@ -296,7 +423,16 @@ def store_df_as_parquet(df, object_type, data_dir):
     return target_folder
 
 
-def write_file_to_gcs(file, bucket_name, blob_name):
+def write_file_to_gcs(file: str, bucket_name: str, blob_name: str):
+    """Stores the file <file> to the bucket <bucket_name> as <blob_name>.
+
+    :param file:
+    :type file: str
+    :param bucket_name:
+    :type bucket_name: str
+    :param blob_name:
+    :type blob_name: str
+    """
     client = storage.Client()
     bucket = client.bucket(bucket_name)
     blob = storage.Blob(blob_name, bucket)
