@@ -3,6 +3,8 @@ from prefect import Flow, Parameter, mapped, task
 from prefect.backend import get_key_value
 from prefect.executors import DaskExecutor
 from prefect.run_configs import UniversalRun
+from prefect.schedules import Schedule
+from prefect.schedules.clocks import CronClock
 from prefect.tasks.secrets import PrefectSecret
 from util.core import download_file, unzip, upload_to_gcs
 from util.gcp import dataproc
@@ -90,4 +92,8 @@ with Flow("bag2gcs_with_dataproc") as flow:
 if __name__ == "__main__":
     flow.executor = DaskExecutor()
     flow.run_config = UniversalRun(labels=["bag"])
-    flow.register(project_name="toepol")
+
+    schedule = Schedule(clocks=[CronClock("0 3 8 * *")])
+    flow.schedule = schedule
+
+    flow.register(project_name="toepol", add_default_labels=False)
