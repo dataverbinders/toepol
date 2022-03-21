@@ -24,7 +24,7 @@ object_map = {
 def init_spark_session():
     """Initializes and returns a PySpark session."""
     spark = (
-        SparkSession.builder.appName("bag2gcs").master("local").getOrCreate()
+        SparkSession.builder.appName("bag2gcs").master("yarn").getOrCreate()
     )
     spark.conf.set("spark.sql.parquet.datetimeRebaseModeInWrite", "CORRECTED")
     spark.conf.set(
