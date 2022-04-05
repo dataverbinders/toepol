@@ -42,11 +42,12 @@ with Flow("bag2gcs_with_dataproc") as flow:
         "bag_url",
         default="https://service.pdok.nl/kadaster/adressen/atom/v1_0/downloads/lvbag-extract-nl.zip",
     )
+    download_bag = Parameter("download_bag", default=True)
     gcs_temp_bucket = Parameter("temp_bucket", default="temp-prefect-data")
     gcp_region = Parameter("gcp_region", default="europe-west4")
 
     # download bag zip
-    bag_file = download_file(bag_url, data_dir, bag_file_name)
+    bag_file = download_file(bag_url, data_dir, bag_file_name, download_bag)
     #  bag_file = "lvbag-extract-nl.zip"
 
     # create spark cluster
