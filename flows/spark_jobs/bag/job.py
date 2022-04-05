@@ -28,7 +28,6 @@ def init_spark_session():
     spark.conf.set(
         "spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED"
     )
-    spark.conf.set("spark.cores.max", "8")
     spark.sql("set spark.sql.parquet.compression.codec=uncompressed")
     return spark
 
