@@ -23,9 +23,7 @@ object_map = {
 
 def init_spark_session():
     """Initializes and returns a PySpark session."""
-    spark = (
-        SparkSession.builder.appName("bag2gcs").master("local").getOrCreate()
-    )
+    spark = SparkSession.builder.appName("bag2gcs").master("yarn").getOrCreate()
     spark.conf.set("spark.sql.parquet.datetimeRebaseModeInWrite", "CORRECTED")
     spark.conf.set(
         "spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED"
@@ -221,9 +219,7 @@ def convert_multivlak(
                         positions = interior["gml:LinearRing"]["gml:posList"][
                             "_VALUE"
                         ]
-                        interior_lr = create_linear_ring(
-                            positions, transformer
-                        )
+                        interior_lr = create_linear_ring(positions, transformer)
                         interior_lrs.append(interior_lr)
                 polygon = geometry.Polygon(exterior_lr, interior_lrs)
                 polygons.append(polygon)
@@ -331,9 +327,7 @@ def convert_polygon(
             exterior_lr = create_linear_ring(positions, transformer, dimension)
 
             # interiors
-            interiors = row["Objecten:geometrie"]["gml:Polygon"][
-                "gml:interior"
-            ]
+            interiors = row["Objecten:geometrie"]["gml:Polygon"]["gml:interior"]
             interior_lrs = []
             if interiors is not None:
                 for interior in interiors:
