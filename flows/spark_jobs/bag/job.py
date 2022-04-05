@@ -23,7 +23,12 @@ object_map = {
 
 def init_spark_session():
     """Initializes and returns a PySpark session."""
-    spark = SparkSession.builder.appName("bag2gcs").master("yarn").getOrCreate()
+    spark = (
+        SparkSession.builder.appName("bag2gcs")
+        .master("yarn")
+        .config("spark.jars.packages", "com.databricks:spark-xml_2.12:0.14.0")
+        .getOrCreate()
+    )
     spark.conf.set("temporaryGcsBucket", "temp-data-pyspark")
     spark.conf.set("spark.sql.parquet.datetimeRebaseModeInWrite", "CORRECTED")
     spark.conf.set(
