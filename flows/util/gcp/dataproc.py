@@ -1,6 +1,6 @@
 from google.cloud import dataproc_v1
 from prefect import task
-
+from prefect.triggers import all_finished
 
 @task
 def create_cluster(credentials: dict, region: str, config: dict, **kwargs):
@@ -34,7 +34,7 @@ def create_cluster(credentials: dict, region: str, config: dict, **kwargs):
     return response
 
 
-@task
+@task(trigger=all_finished)
 def delete_cluster(credentials: dict, region: str, config: dict, **kwargs):
     """Delete a dataproc cluster.
 
