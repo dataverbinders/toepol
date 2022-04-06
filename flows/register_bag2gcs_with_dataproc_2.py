@@ -60,7 +60,7 @@ with Flow("bag2gcs_with_dataproc") as flow:
 
     # unzip subzips and upload xml files to GCS
     target_dirs = get_target_directories(data_dir, mapped(sub_zipfiles))
-    xml_files = unzip.mapped(sub_zipfiles, target_dirs)
+    xml_files = unzip.map(sub_zipfiles, target_dirs)
 
     # upload 'subzips' to GCS
     #  uris = upload_to_gcs(
