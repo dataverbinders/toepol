@@ -41,8 +41,9 @@ def get_target_directories(zipfile):
 @task
 def get_blob_directories(zipfile):
     zipname = zipfile.split("/")[-1]
-    object_type = [c for c in zipname.split(".")[0] if not c.isdigit()]
+    object_type = "".join([c for c in zipname.split(".")[0] if not c.isdigit()])
     return f"bag/xml/{object_type}"
+
 
 @task
 def create_data_dir(name: str) -> str:
