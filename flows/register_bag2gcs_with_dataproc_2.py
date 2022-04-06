@@ -32,9 +32,9 @@ def add_archive_uris_to_config(config: dict, uris: List):
 
 
 @task
-def get_target_directories(data_dir, zipfile):
-    object_type = "".join([c for c in zipfile.split(".")[0] if not c.isdigit()])
-    return f"{data_dir}/{object_type}"
+def get_target_directories(zipfile):
+    object_dir = "".join([c for c in zipfile.split(".")[0] if not c.isdigit()])
+    return object_dir
 
 
 with Flow("bag2gcs_with_dataproc") as flow:
@@ -59,7 +59,7 @@ with Flow("bag2gcs_with_dataproc") as flow:
     sub_zipfiles = unzip(bag_file, data_dir, select_extension=".zip")
 
     # unzip subzips and upload xml files to GCS
-    target_dirs = get_target_directories(data_dir, mapped(sub_zipfiles))
+    target_dirs = get_target_directories.map(sub_zipfiles)
     xml_files = unzip.map(sub_zipfiles, target_dirs)
 
     # upload 'subzips' to GCS
