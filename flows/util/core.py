@@ -20,7 +20,7 @@ def unzip(file, target_directory, select_extension=None):
         zip.extractall(target_directory)
 
     if select_extension:
-        files =  [f for f in files if f.endswith(select_extension)]
+        files = [f for f in files if f.endswith(select_extension)]
 
     return files
 
@@ -46,5 +46,5 @@ def upload_to_gcs(credentials, file, bucket, folder=None):
 def upload_files_to_gcs(credentials, files, bucket, folder=None):
     uris = []
     for file in files:
-        uris.append(upload_to_gcs(credentials, file, bucket, folder))
+        uris.append(upload_to_gcs.run(credentials, file, bucket, folder))
     return uris
