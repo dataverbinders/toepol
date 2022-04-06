@@ -8,8 +8,8 @@ from prefect.run_configs import UniversalRun
 from prefect.schedules import Schedule
 from prefect.schedules.clocks import CronClock
 from prefect.tasks.secrets import PrefectSecret
-from util.core import download_file, unzip, upload_to_gcs, upload_files_to_gcs
-from util.gcp import dataproc
+from util.core import download_file, unzip, upload_files_to_gcs, upload_to_gcs
+from util.gcp.dataproc import submit_batch_job
 
 
 @task
@@ -36,11 +36,13 @@ def get_target_directories(zipfile):
     object_dir = "".join([c for c in zipfile.split(".")[0] if not c.isdigit()])
     return object_dir
 
+
 @task
 def get_blob_directories(zipfile):
     zipname = zipfile.split("/")[-1]
     object_type = [c for c in zipname.split(".")[0] if not c.isdigit()]
     return f"bag/xml/{object_type}"
+
 
 with Flow("bag2gcs_with_dataproc") as flow:
     logger = prefect.context.get("logger")
@@ -69,7 +71,9 @@ with Flow("bag2gcs_with_dataproc") as flow:
 
     # upload xml files to GCS
     paths = get_blob_directories(mapped(sub_zipfiles))
-    uris = upload_files_to_gcs(gcp_credentials, mapped(xml_files), gcs_temp_bucket, mapped(paths))
+    uris = upload_files_to_gcs(
+        gcp_credentials, mapped(xml_files), gcs_temp_bucket, mapped(paths)
+    )
 
     # upload 'subzips' to GCS
     #  uris = upload_to_gcs(
@@ -92,7 +96,9 @@ with Flow("bag2gcs_with_dataproc") as flow:
 
 if __name__ == "__main__":
     flow.executor = LocalExecutor()
-    flow.run_config = UniversalRun(labels=["bag"])
+    flow.run_config = UniversalRun(
+        labels=["bag"], env={"PREFECT__CLOUD__HEARTBEAT_MODE": "thread"}
+    )
 
     schedule = Schedule(clocks=[CronClock("0 3 8 * *")])
     flow.schedule = schedule
