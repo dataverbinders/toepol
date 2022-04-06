@@ -31,6 +31,12 @@ def add_archive_uris_to_config(config: dict, uris: List):
     return config
 
 
+@task
+def get_target_directories(data_dir, zipfile):
+    object_type = "".join([c for c in zipfile.split(".")[0] if not c.isdigit()])
+    return f"{data_dir}/{object_type}"
+
+
 with Flow("bag2gcs_with_dataproc") as flow:
     logger = prefect.context.get("logger")
     gcp_credentials = PrefectSecret("GCP_CREDENTIALS")
@@ -53,7 +59,8 @@ with Flow("bag2gcs_with_dataproc") as flow:
     sub_zipfiles = unzip(bag_file, data_dir, select_extension=".zip")
 
     # unzip subzips and upload xml files to GCS
-    xml_files = unzip(sub_zipfiles, sub_zipfiles)
+    target_dirs = get_target_directories(data_dir, mapped(sub_zipfiles))
+    xml_files = unzip.mapped(sub_zipfiles, target_dirs)
 
     # upload 'subzips' to GCS
     #  uris = upload_to_gcs(
