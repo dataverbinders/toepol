@@ -49,16 +49,15 @@ with Flow("bag2gcs_with_dataproc") as flow:
     # download bag zip
     bag_file = download_file(bag_url, data_dir, bag_file_name, download_bag)
 
-# unzip main bag zip
+    # unzip main bag zip
     sub_zipfiles = unzip(bag_file, data_dir, select_extension=".zip")
 
     # unzip subzips and upload xml files to GCS
-    for subzip in sub_zipfiles:
-        xml_files = unzip(subzip, f"{data_dir}/{subzip.split('.')[0]}")
+    xml_files = unzip(sub_zipfiles, sub_zipfiles)
 
     # upload 'subzips' to GCS
     #  uris = upload_to_gcs(
-        #  gcp_credentials, mapped(files), gcs_temp_bucket, "bag/subzips"
+    #  gcp_credentials, mapped(files), gcs_temp_bucket, "bag/subzips"
     #  )
 
     # upload pyspark script and jar to GCS
