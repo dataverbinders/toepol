@@ -170,3 +170,8 @@ def submit_job_as_operation(credentials: dict, region: str, config: dict, **kwar
     operation = client.submit_job_as_operation(request=request)
     response = operation.result()
     return response
+
+
+@task
+def submit_batch_job(credentials: dict, region: str, config: dict, **kwargs):
+    pass
