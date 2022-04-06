@@ -3,7 +3,7 @@ from typing import List
 import prefect
 from prefect import Flow, Parameter, mapped, task
 from prefect.backend import get_key_value
-from prefect.executors import LocalExecutor
+from prefect.executors import LocalDaskExecutor
 from prefect.run_configs import UniversalRun
 from prefect.schedules import Schedule
 from prefect.schedules.clocks import CronClock
@@ -95,7 +95,7 @@ with Flow("bag2gcs_with_dataproc") as flow:
     )
 
 if __name__ == "__main__":
-    flow.executor = LocalExecutor()
+    flow.executor = LocalDaskExecutor()
     flow.run_config = UniversalRun(
         labels=["bag"], env={"PREFECT__CLOUD__HEARTBEAT_MODE": "thread"}
     )
