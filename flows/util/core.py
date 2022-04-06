@@ -40,3 +40,11 @@ def upload_to_gcs(credentials, file, bucket, folder=None):
     uri = f"gs://{bucket}/{blob}"
 
     return uri
+
+
+@task
+def upload_files_to_gcs(credentials, files, bucket, folder=None):
+    uris = []
+    for file in files:
+        uris.append(upload_to_gcs(credentials, file, bucket, folder))
+    return uris
