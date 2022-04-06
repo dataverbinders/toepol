@@ -1,3 +1,4 @@
+from os import listdir, mkdir
 from typing import List
 
 import prefect
@@ -43,6 +44,12 @@ def get_blob_directories(zipfile):
     object_type = [c for c in zipname.split(".")[0] if not c.isdigit()]
     return f"bag/xml/{object_type}"
 
+@task
+def create_data_dir(name: str) -> str:
+    if name not in listdir():
+        mkdir(name)
+    return name
+
 
 with Flow("bag2gcs_with_dataproc") as flow:
     logger = prefect.context.get("logger")
@@ -58,6 +65,8 @@ with Flow("bag2gcs_with_dataproc") as flow:
     download_bag = Parameter("download_bag", default=True)
     gcs_temp_bucket = Parameter("temp_bucket", default="temp-prefect-data")
     gcp_region = Parameter("gcp_region", default="europe-west4")
+
+    data_dir = create_data_dir(data_dir)
 
     # download bag zip
     bag_file = download_file(bag_url, data_dir, bag_file_name, download_bag)
