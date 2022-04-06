@@ -18,6 +18,10 @@ def unzip(file, target_directory, select_extension=None):
     with ZipFile(file) as zip:
         files = [f"{target_directory}/{x}" for x in zip.namelist()]
         zip.extractall(target_directory)
+
+    if select_extension:
+        files =  [f for f in files if f.endswith(select_extension)]
+
     return files
 
 
