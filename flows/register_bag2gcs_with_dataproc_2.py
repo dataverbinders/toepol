@@ -97,7 +97,7 @@ with Flow("bag2gcs_with_dataproc") as flow:
     # upload pyspark script and jar to GCS
     py_file = upload_to_gcs(
         gcp_credentials,
-        "flows/spark_jobs/bag/job.py",
+        "flows/spark_jobs/bag/batch_job.py",
         gcs_temp_bucket,
         "bag/dataproc",
     )

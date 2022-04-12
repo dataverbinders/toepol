@@ -407,10 +407,10 @@ def store_df_as_parquet(df: DataFrame, object_type: str, data_dir: str) -> str:
     :rtype: str
     """
     target_folder = f"{data_dir}/{object_type}"
-    #  df.repartition(1).write.format("parquet").mode("overwrite").save(
-        #  target_folder
-    #  )
-    df.write.format("parquet").mode("overwrite").save(target_folder)
+    df.repartition(1).write.format("parquet").mode("overwrite").save(
+        target_folder
+    )
+    #  df.write.format("parquet").mode("overwrite").save(target_folder)
     return target_folder
 
 
