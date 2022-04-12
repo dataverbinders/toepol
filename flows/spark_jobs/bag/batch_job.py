@@ -45,7 +45,7 @@ def init_spark_session():
     spark.conf.set(
         "spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED"
     )
-    spark.sql("set spark.sql.parquet.compression.codec=uncompressed")
+    #  spark.sql("set spark.sql.parquet.compression.codec=uncompressed")
     return spark
 
 
