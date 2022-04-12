@@ -1,6 +1,7 @@
 from google.cloud import dataproc_v1
 from prefect import task
 from prefect.triggers import all_finished
+import uuid
 
 
 @task
@@ -177,9 +178,13 @@ def submit_batch_job(credentials: dict, region: str, config: dict, **kwargs):
     )
 
     batch = dataproc_v1.Batch(**config)
+    batch_id = f"bag-{uuid.uuid1()}"
     request = dataproc_v1.CreateBatchRequest(
-        parent=credentials["project_id"], batch=batch
+        batch_id=batch_id,
+        parent=f"projects/{credentials['project_id']}/regions/{region}",
+        batch=batch,
     )
+
     operation = client.create_batch(request=request)
     response = operation.result()
     return response
