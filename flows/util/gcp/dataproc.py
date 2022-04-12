@@ -177,7 +177,9 @@ def submit_batch_job(credentials: dict, region: str, config: dict, **kwargs):
     )
 
     batch = dataproc_v1.Batch(**config)
-    request = dataproc_v1.CreateBatchRequest(batch=batch)
+    request = dataproc_v1.CreateBatchRequest(
+        parent=credentials["project_id"], batch=batch
+    )
     operation = client.create_batch(request=request)
     response = operation.result()
     return response
