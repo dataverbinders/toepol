@@ -69,6 +69,9 @@ with Flow("bag2gcs_with_dataproc") as flow:
 
     data_dir = create_data_dir(data_dir)
 
+    # get batch job config
+    job_config = get_key_value(key="dataproc_bag_batch_job_config")
+
     # download bag zip
     bag_file = download_file(bag_url, data_dir, bag_file_name, download_bag)
 
@@ -85,11 +88,6 @@ with Flow("bag2gcs_with_dataproc") as flow:
         gcp_credentials, mapped(xml_files), gcs_temp_bucket, mapped(paths)
     )
 
-    # upload 'subzips' to GCS
-    #  uris = upload_to_gcs(
-    #  gcp_credentials, mapped(files), gcs_temp_bucket, "bag/subzips"
-    #  )
-
     # upload pyspark script and jar to GCS
     py_file = upload_to_gcs(
         gcp_credentials,
@@ -102,6 +100,13 @@ with Flow("bag2gcs_with_dataproc") as flow:
         "flows/spark_jobs/bag/spark-xml_2.12-0.14.0.jar",
         gcs_temp_bucket,
         "bag/dataproc",
+    )
+
+    batch_result = submit_batch_job(
+        gcp_credentials,
+        gcp_region,
+        job_config,
+        dependencies=[uris, py_file, jar_file]
     )
 
 if __name__ == "__main__":

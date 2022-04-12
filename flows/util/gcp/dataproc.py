@@ -2,6 +2,7 @@ from google.cloud import dataproc_v1
 from prefect import task
 from prefect.triggers import all_finished
 
+
 @task
 def create_cluster(credentials: dict, region: str, config: dict, **kwargs):
     """Create a dataproc cluster.
@@ -66,11 +67,7 @@ def delete_cluster(credentials: dict, region: str, config: dict, **kwargs):
 
 @task
 def start_cluster(
-    credentials: dict,
-    project_id: str,
-    region: str,
-    cluster_name: str,
-    **kwargs
+    credentials: dict, project_id: str, region: str, cluster_name: str, **kwargs
 ):
     """Start a stopped dataproc cluster.
 
@@ -105,11 +102,7 @@ def start_cluster(
 
 @task
 def stop_cluster(
-    credentials: dict,
-    project_id: str,
-    region: str,
-    cluster_name: str,
-    **kwargs
+    credentials: dict, project_id: str, region: str, cluster_name: str, **kwargs
 ):
     """Stop a running dataproc cluster.
 
@@ -144,7 +137,9 @@ def stop_cluster(
 
 
 @task
-def submit_job_as_operation(credentials: dict, region: str, config: dict, **kwargs):
+def submit_job_as_operation(
+    credentials: dict, region: str, config: dict, **kwargs
+):
     """Submit a job as an operation.
     This task only returns once the job is finished.
 
@@ -174,4 +169,15 @@ def submit_job_as_operation(credentials: dict, region: str, config: dict, **kwar
 
 @task
 def submit_batch_job(credentials: dict, region: str, config: dict, **kwargs):
-    pass
+    client = dataproc_v1.BatchControllerClient().from_service_account_info(
+        credentials,
+        client_options={
+            "api_endpoint": "{}-dataproc.googleapis.com:443".format(region)
+        },
+    )
+
+    batch = dataproc_v1.Batch(**config)
+    request = dataproc_v1.CreateBatchRequest(batch=batch)
+    operation = client.create_batch(request=request)
+    response = operation.result()
+    return response
