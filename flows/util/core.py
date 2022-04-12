@@ -1,6 +1,8 @@
+from datetime import timedelta
+from zipfile import ZipFile
+
 import requests
 from prefect import task
-from zipfile import ZipFile
 from prefect.tasks.gcp.storage import GCSUpload
 
 
@@ -25,7 +27,7 @@ def unzip(file, target_directory, select_extension=None):
     return files
 
 
-@task
+@task(max_retries=16, retry_delay=timedelta(seconds=5))
 def upload_to_gcs(credentials, file, bucket, folder=None):
     filename = file.split("/")[-1]
     if folder is not None:
