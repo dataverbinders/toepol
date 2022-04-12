@@ -9,6 +9,7 @@ from prefect.run_configs import UniversalRun
 from prefect.schedules import Schedule
 from prefect.schedules.clocks import CronClock
 from prefect.tasks.secrets import PrefectSecret
+from prefect.tasks.shell import ShellTask
 from util.core import download_file, unzip, upload_files_to_gcs, upload_to_gcs
 from util.gcp.dataproc import submit_batch_job
 
@@ -50,6 +51,11 @@ def create_data_dir(name: str) -> str:
     if name not in listdir():
         mkdir(name)
     return name
+
+
+@task
+def delete_dir(name: str, **kwargs):
+    ShellTask(command=f"rm -r {name}")
 
 
 with Flow("bag2gcs_with_dataproc") as flow:
@@ -108,6 +114,8 @@ with Flow("bag2gcs_with_dataproc") as flow:
         job_config,
         dependencies=[uris, py_file, jar_file]
     )
+
+    delete_dir(data_dir, dep=[batch_result])
 
 if __name__ == "__main__":
     flow.executor = LocalDaskExecutor()
