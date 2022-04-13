@@ -87,6 +87,8 @@ with Flow("bag_gcs-to-bq") as flow:
         "Nummeraanduiding",
         "Ligplaats",
         "Standplaats",
+        "Pand",
+        "Verblijfsobject"
     ]:
         # List URIs
         #  uris = get_object_uris(credentials, gcs_bucket, f"{gcs_path}")
