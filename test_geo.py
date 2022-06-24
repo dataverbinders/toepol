@@ -1,22 +1,70 @@
-# import os, glob
-import pandas as pd
 from pyspark.sql import DataFrame, SparkSession
 from google.cloud import storage
-from pyspark.sql.functions import regexp_replace, col, split, explode, sequence, size, lit, arrays_zip, udf
+from pyspark.sql.functions import regexp_replace, col, split, explode, sequence, size, lit, arrays_zip, udf, length, expr, substring
 from pyspark.sql.types import *
-from marc_big_boi_brain import find_nearest_index
-from math import floor, sqrt
+from math import floor, sqrt, ceil
 
 
 
 bag_objecten = [
     "Woonplaats",
     "Nummeraanduiding",
-    # "Ligplaats",
-    # "Standplaats",
-    # "Pand",
-    # "Verblijfsobject",
+    "Ligplaats",
+    "Standplaats",
+    "Pand",
+    "Verblijfsobject",
 ]
+
+def index_to_lat(index: int) -> float:
+    return 50.75 + ((53.7 - 50.75) / 44700) * floor(index / 32700)
+
+
+def index_to_long(index: int) -> float:
+    return 3.2 + ((7.22 - 3.2) / 32700) * (index % 32700)
+
+
+def index_to_lat_long(index: int):
+    return (index_to_lat(index), index_to_long(index))
+
+
+def lat_long_to_index(lat: float, long: float) -> int:
+    i_lat = (lat - 50.75) / ((53.7 - 50.75) / 44700)
+    i_long = (long - 3.2) / ((7.22 - 3.2) / 32700)
+    index = i_long + 32700 * i_lat
+
+    return index
+
+
+@udf(returnType=IntegerType())
+def find_nearest_index(lat: float, long: float) -> int:
+    approx_index = floor(lat_long_to_index(lat, long))
+
+    nearest_index = None
+    nearest_index_dist = float("inf")
+
+    lat_offset = [0]
+    if approx_index % 32700 != 0:
+        lat_offset.append(-1)
+    if approx_index % 32700 != 32699:
+        lat_offset.append(1)
+
+    long_offset = [0]
+    if approx_index >= 32700:
+        long_offset.append(-1)
+    if approx_index <= (44700 * 32700 - 32700):
+        long_offset.append(1)
+
+    for lat_o in lat_offset:
+        for long_o in long_offset:
+            comp_index = approx_index + lat_o + long_o * 32700
+            comp_lat, comp_long = index_to_lat_long(comp_index)
+
+            dist = sqrt((lat - comp_lat) ** 2 + (long - comp_long) ** 2)
+            if dist < nearest_index_dist:
+                nearest_index = comp_index
+                nearest_index_dist = dist
+
+    return nearest_index
 
 
 def init_spark_session():
@@ -29,22 +77,18 @@ def init_spark_session():
     return spark
 
 def load_parquet(spark, object_name):
-    # df = spark.read.load(f"gs://dataverbinders-dev/kadaster/bag/{object_name}/*.snappy.parquet")
-    df = spark.read.load(f"gs://dataverbinders-dev/kadaster/bag/{object_name}")
-    # df = spark.read.load(f"/Users/eddylim/Documents/work_repos/toepol/data/Woonplaats")
-    # df = spark.read.load(f"/Users/eddylim/Documents/work_repos/toepol/data/{object_name}")
+    # df = spark.read.load(f"/Users/eddylim/Documents/work_repos/toepol/data/test_wpl_poly/*.parquet")
+    if object_name in ["Pand", "Verblijfsobject"]:
+        df = spark.read.load(f"/Users/eddylim/Documents/work_repos/toepol/data/bag_output/{object_name}/*/*.parquet")
+        # df = spark.read.load(f"gs://dataverbinders-dev/kadaster/bag/{object_name}/*/")
+    else:
+        df = spark.read.load(f"/Users/eddylim/Documents/work_repos/toepol/data/bag_output/{object_name}/")
+        # df = spark.read.load(f"gs://dataverbinders-dev/kadaster/bag/{object_name}/")
 
     return df
 
 
 def store_df_on_gcs(df: DataFrame, target_blob: str):
-    # df.repartition(1).write.format("parquet").mode("overwrite").save(
-    #     target_blob
-    # )
-
-    # if "Objecten:geometrie" in df.columns:
-    #     df = df.drop("Objecten:geometrie")
-
     df.write.format("parquet").mode("overwrite").save(
         target_blob
     )
@@ -60,6 +104,7 @@ def create_col_ids(df):
 
     return df
 
+
 def extract_polygon(df):
     df = df.withColumn('geometry', regexp_replace(col('geometry.geo_polygon'), "POLYGON\\s\\(\\(", ""))
     df = df.withColumn('geometry', regexp_replace(col('geometry'), "\\)\\)", ""))
@@ -72,7 +117,7 @@ def extract_polygon(df):
     df_outer = df_outer.withColumn("outerPolygon", explode(col("outerPolygon")))
     df_outer = df_outer.withColumn('geometry', split(col("outerPolygon.outerPolygon"), " "))
     df_outer = df_outer.withColumn('vlakID', lit(None))
-    df_outer = df_outer.withColumn("puntId", col("outerPolygon.0"))
+    df_outer = df_outer.withColumn("puntID", col("outerPolygon.0"))
 
     df_outer = df_outer.withColumn('lat', col("geometry").getItem(0).cast("float"))
     df_outer = df_outer.withColumn('long', col("geometry").getItem(1).cast("float"))
@@ -85,6 +130,7 @@ def extract_polygon(df):
     # df_inner = df_inner.withColumn('innerPolygon', arrays_zip(sequence(lit(-1), (-1 * (size(col("innerPolygon"))))), col("innerPolygon")))
     # df_inner = df_inner.withColumn("innerPolygon", explode(col("innerPolygon")))
     # df_inner = df_inner.withColumn('geometry', split(col("innerPolygon.innerPolygon"), " "))
+    # df_outer = df_outer.withColumn('vlakID', lit(None))
     # df_inner = df_inner.withColumn("puntId", col("innerPolygon.0"))
 
     # df_inner = df_inner.withColumn('lat', col("geometry").getItem(0))
@@ -151,63 +197,91 @@ def extract_multi_polygon(df):
 
 
 def extract_point(df):
-    df = df.withColumn("geometry", col("geometry.point"))
+    df = df.withColumn('vlakID', lit(None))
+    df = df.withColumn('puntID', lit(None))
+    df = df.withColumn("geometry", col("geometry.geo_point"))
+    df = df.na.drop(subset=['geometry'])
     df = df.withColumn('geometry', regexp_replace(col('geometry'), "POINT\\s\\(", ""))
     df = df.withColumn('geometry', regexp_replace(col('geometry'), "\\)", ""))
+    df = df.withColumn('geometry', split(col("geometry"), " "))
 
-    df = df.withColumn('geometryPoints', arrays_zip(sequence(lit(0), size(col("geometry")) - 1), col("geometry")))
-    df = df.withColumn("geometryPoints", explode(col("geometryPoints")))
-    df = df.withColumn('geometry', split(col("geometryPoints.geometryPoints"), " "))
-    df = df.withColumn('vlakID', lit(None))
-    df = df.withColumn("puntId", col("geometryPoints.0"))
+    df = df.withColumn('lat', col("geometry").getItem(0).cast("float"))
+    df = df.withColumn('long', col("geometry").getItem(1).cast("float"))
 
-    df = df.withColumn('lat', col("geometryPoints").getItem(0).cast("float"))
-    df = df.withColumn('long', col("geometryPoints").getItem(1).cast("float"))
-    df.drop("geometry")
+    df = df.drop("geometry")
+    df = df.withColumn("refID", find_nearest_index(col("lat"), col("long")))
+    # df.show()
 
-    
-    df.show()
+    return df
 
 
-def create_geo_df(df, object):
+def create_df_list(df, object):
     # df = df.withColumn('objType', lit("Woonplaats"))
     df = df.withColumn('objType', lit(object))
     df = create_col_ids(df)
 
     geo_df_columns = df.select("geometry.*").columns
+    # print(df.count())
+    df_list = list()
 
     if "geo_multi_polygon" in geo_df_columns:
         df_mp = extract_multi_polygon(df)
         # df_mp.show()
         # pass
-
+        df_list.append(df_mp)
+    # print(df.count())
     
     if "geo_polygon" in geo_df_columns:
         df_polygon = extract_polygon(df)
-        # df_polygon.show()
+        df_list.append(df_polygon)
+        
         # pass
-
+    
 
     if "geo_point" in geo_df_columns:
         df_point = extract_point(df)
+        # df_point.show()
+        df_list.append(df_point)
         # pass
     
-    df = df_polygon.union(df_mp)
-    # df = df_mp.union(df_polygon)
 
     # df.printSchema()
-    
-    df.show()
-    # print(f"Length of df_mp: {df_mp.count()}\nLength of df_polygon: {df_polygon.count()}\nTotal Length: {df.count()}")
 
-    # df.write.format("csv").mode("overwrite").option('nullValue', None).save("/Users/eddylim/Documents/work_repos/toepol/data/test.csv")
-    # df.write.format("csv").mode("overwrite").option('nullValue', None).save("/Users/eddylim/Documents/work_repos/toepol/data/test.csv", header='true')
-    # df.write.parquet("/Users/eddylim/Documents/work_repos/toepol/data/test")
+    # print(df.count())
+    
+    # df.show()
+    # df_new.show()
+
     # df.write.format("parquet").mode("overwrite").save("/Users/eddylim/Documents/work_repos/toepol/data/test")
 
-    return df
+    # df_new = df_new.na.fill("")
+    # df_new.na.fill("")
+    # df_new.show()
+    
+    return df_list
 
 
+def create_geo_df(list_df):    
+    emptyRDD = spark.sparkContext.emptyRDD()
+    schema = StructType([
+        StructField("objType", StringType(), False),
+        StructField("identificatie", LongType(), True),
+        StructField("historieIdentificatie", LongType(), True),
+        StructField("vlakID", IntegerType(), True),
+        StructField("puntID", IntegerType(), True),
+        StructField("lat", FloatType(), True),
+        StructField("long", FloatType(), True),
+        StructField("refID", IntegerType(), True),
+    ])
+
+    df_new = spark.createDataFrame(emptyRDD, schema)
+
+    for dfs in list_df:
+        df_new = df_new.union(dfs)
+    
+    # print(df_new.count())
+
+    return df_new
 
 
 def extract_geography(spark, object):
@@ -215,11 +289,13 @@ def extract_geography(spark, object):
 
     if "geometry" in df.columns:
         df = df[["Objecten:identificatie", "Objecten:voorkomen", "geometry"]]
-        df = create_geo_df(df, object)
+        dfs = create_df_list(df, object)
+        df = create_geo_df(dfs)
         
         # blob_name = f"gs://dataverbinders-dev/kadaster/bag/dim_{object}"
+        blob_name = f"/Users/eddylim/Documents/work_repos/toepol/data/test_geo/{object}"
         # print(blob_name)
-        # store_df_on_gcs(df, blob_name)
+        store_df_on_gcs(df, blob_name)
 
 
 if __name__ == "__main__":
@@ -227,3 +303,6 @@ if __name__ == "__main__":
 
     for i in bag_objecten:
         extract_geography(spark, i)
+    
+
+

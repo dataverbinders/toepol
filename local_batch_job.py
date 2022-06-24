@@ -3,10 +3,11 @@ from typing import List
 from google.cloud import storage
 from pyproj import Transformer
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.types import StructType
+from pyspark.sql.types import StructType, StringType
 from pyspark.sql.functions import struct, lit, col
 from shapely import geometry, wkt
 from math import ceil
+import os
 import json
 
 # Object map
@@ -21,19 +22,32 @@ object_map = {
 }
 
 
-def get_file_uris(object_key: str) -> list:
-    client = storage.Client()
+def get_file_uris(object_key: str, dir:str) -> list:
+    # client = storage.Client()
 
-    blobs = list(
-        client.list_blobs(
-            bucket_or_name="temp-prefect-data", prefix=f"bag/xml/{object_key}"
-        )
-    )
+    # blobs = list(
+    #     client.list_blobs(
+    #         bucket_or_name="temp-prefect-data", prefix=f"bag/xml/{object_key}"
+    #     )
+    # )
 
-    uris = [f"gs://{blob.bucket.name}/{blob.name}" for blob in blobs]
-    uris2 = ",".join(uris)
+    # uris = [f"gs://{blob.bucket.name}/{blob.name}" for blob in blobs]
+    # uris = ",".join(uris)
+    
+    path_files = f"{os.getcwd()}/{dir}/bag/{object_key}"
+    # print(path_files)
 
-    return [uris, uris2]
+    files = os.listdir(path_files)
+    # files = f"{os.getcwd()}/{dir}/{object_key}"
+
+    files = [f"{path_files}/{file_name}" for file_name in files]
+    files.sort()
+
+    files2 = ",".join(files)
+
+    return [files, files2]
+
+    # return uris
 
 
 def init_spark_session():
@@ -56,30 +70,6 @@ def init_transformer():
     """Initializes and returns a pyproj transformer."""
     transformer = Transformer.from_crs("epsg:28992", "epsg:4326")
     return transformer
-
-
-def export_schema(object_type, df_schema):
-    client = storage.Client()
-    bucket = client.bucket("temp-prefect-data")
-    blob = bucket.blob(f"bag/schemas/{object_type}_schema.json")
-    blob.upload_from_string(
-        data=json.dump(df_schema.jsonValue()),
-        content_type="application/json",
-    )
-
-    # with blob.open(mode="wt") as wr:
-    #     json.dump(df_schema.jsonValue(), wr)
-
-
-def load_schema(object_type):
-    client = storage.Client()
-    bucket = client.bucket("temp-prefect-data")
-    blob = bucket.blob(f"bag/schemas/{object_type}_schema.json")
-
-    with blob.open(mode="rt") as schema_file:
-        df_schema = StructType.fromJson(json.load(schema_file))
-    
-    return df_schema
 
 
 def export_schema_spark_df(
@@ -105,10 +95,20 @@ def export_schema_spark_df(
 
     # print(df.schema)
     
-    # with open(f"{os.getcwd()}/{object_type}_schema.json", "w") as wr:
-    #     json.dump(df.schema.jsonValue(), wr)
+    with open(f"{os.getcwd()}/{object_type}_schema.json", "w") as wr:
+        json.dump(df.schema.jsonValue(), wr)
 
-    export_schema(object_type, df.schema)
+
+
+    # return df.schema
+
+
+def load_schema(object_type):
+    with open(f"{os.getcwd()}/data/bag_schemas/{object_type}_schema.json") as schema_file:
+        df_schema = StructType.fromJson(json.load(schema_file))
+    
+    return df_schema
+
 
 
 def create_spark_df(
@@ -220,10 +220,12 @@ def create_linear_ring(
     """
     points_list = []
     s = positions.split()
+
     for i in range(0, len(s), dimension):
         x, y = transform_coords(s[i], s[i + 1], transformer)
         points_list.append([x, y])
     lr = geometry.LinearRing(points_list)
+
     return lr
 
 
@@ -535,9 +537,7 @@ def store_df_as_parquet(df: DataFrame, object_type: str, data_dir: str) -> str:
     :rtype: str
     """
     target_folder = f"{data_dir}/{object_type}"
-    #  df.repartition(1).write.format("parquet").mode("overwrite").save(
-        #  target_folder
-    #  )
+    
     df.write.format("parquet").mode("overwrite").save(target_folder)
     return target_folder
 
@@ -554,16 +554,19 @@ def store_df_on_gcs(df: DataFrame, target_blob: str):
 if __name__ == "__main__":
     spark = init_spark_session()
     data_dir = "data"
+    local_dir = "/Users/eddylim/Documents/work_repos/toepol/data/bag_output"
+    # local_dir = "/Users/eddylim/Documents/work_repos/toepol/data/test"
 
     for key, val in object_map.items():
         print(f"Processing {val}")
-        files = get_file_uris(key)
-        export_schema_spark_df(spark, val, files[1])
+        files = get_file_uris(key, data_dir)
+        # export_schema_spark_df(spark, val, files[1])
 
         if val in ["Pand", "Verblijfsobject"]:
+            # df_schema = export_schema_spark_df(spark, val, files[1])
+            # export_schema_spark_df(spark, val, files[1])
             df_schema = load_schema(val)
 
-            # num_files = 30
             num_files = 25
             nxt_number = 0
             for i in range(0, len(files[0]), num_files):
@@ -576,7 +579,22 @@ if __name__ == "__main__":
 
                 df = convert_geometry(df, spark)
 
+                # df.printSchema()
+                # print("----------------------------------------------------")
+                # print(df.select("geometry.*").columns)
                 if val == "Verblijfsobject":
+                    # emptyRDD = spark.sparkContext.emptyRDD()
+                    # with open(f"{os.getcwd()}/{val}_export_schema.json") as schema_file:
+                    #     df_export_schema = StructType.fromJson(json.load(schema_file))
+
+                    # df_new = spark.createDataFrame(emptyRDD, df_export_schema)
+
+                    # for column in df_new.select("geometry.*").columns:
+                    #     # print(col)
+                    #     if column not in df.select("geometry.*").columns:
+                    #         # df = df.withColumn(f"geometry.{col}", lit(""))
+                    #         df = df.withColumn("geometry", struct(*[lit(None).alias(f"{column}"), col("geometry")["geo_point"].alias("geo_point")]))
+                    
                     df_columns = df.select("geometry.*").columns
                     if "geo_polygon" not in df_columns:
                         print("Polygon is empty")
@@ -585,28 +603,24 @@ if __name__ == "__main__":
                     if "geo_point" not in df_columns:
                         print("Point is empty")
                         df = df.withColumn("geometry", struct(*[col("geometry")["geo_polygon"].alias("geo_polygon"), lit(None).cast("string").alias("geo_point")]))
-                    
-                store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{val}/part_{int(i / num_files)}")
+                
+                    # df.printSchema()
+                
+                    # df = df_new.union(df)
+                
+                # df.printSchema()
+                
+                store_df_on_gcs(df, f"{local_dir}/{val}/part_{int(i / num_files)}")
                 del df
 
         else:
-            df = create_spark_df(spark, val, files[1])
+            df = create_spark_df_schemaless(spark, val, files[1])
             df = convert_geometry(df, spark)
-            target = f"gs://dataverbinders-dev/kadaster/bag/{val}"
-            store_df_on_gcs(df, target)
-    
-    # for key, val in object_map.items():
-    #     print(f"Processing {val}")
-    #     files = get_file_uris(key)
-    #     df_schema = export_schema_spark_df(spark, files[1])
+            store_df_on_gcs(df, f"{local_dir}/{val}")
 
-    #     num_files = 30
-    #     nxt_number = 0
-    #     for i in range(0, len(files[0]), num_files):
-    #         nxt_number += num_files
+    # df = spark.read.load("/Users/eddylim/Documents/work_repos/toepol/data/test/part_*/*.parquet")
+    # df = spark.read.load("/Users/eddylim/Documents/work_repos/toepol/data/test/Verblijfsobject/part_1/*.parquet")
+    # df = df.select("geometry")
 
-    #         file_str = ",".join(files[0][i:nxt_number])
-    #         df = create_spark_df(spark, val, file_str, df_schema)
-
-    #         df = convert_geometry(df, spark)
-    #         store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{val}/part_{int(i / num_files)}")
+    # print(df.count())
+    # df.show()
