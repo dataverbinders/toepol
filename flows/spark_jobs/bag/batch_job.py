@@ -63,7 +63,7 @@ def export_schema(object_type, df_schema):
     bucket = client.bucket("temp-prefect-data")
     blob = bucket.blob(f"bag/schemas/{object_type}_schema.json")
     blob.upload_from_string(
-        data=json.dump(df_schema.jsonValue()),
+        data=json.dumps(df_schema.jsonValue()),
         content_type="application/json",
     )
 
