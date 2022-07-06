@@ -15,6 +15,10 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        flow: [bag-extract]
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -30,3 +34,9 @@ jobs:
       - name: Auth Docker
         run: |
           gcloud auth configure-docker
+
+      - name: Build Container
+        uses: isbang/compose-action@v1.1.0
+        with:
+          compose-file: "./flows/${{matrix.flow}}/docker-compose.yml"
+          up-flags: "--build"
