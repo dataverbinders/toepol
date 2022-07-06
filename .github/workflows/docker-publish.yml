@@ -46,3 +46,6 @@ jobs:
         with:
           compose-file: "./flows/${{matrix.flow}}/docker-compose.yml"
           up-flags: "--build"
+          
+      - name: push container
+        run: docker-compose -f ./flows/${{matrix.flow}}/docker-compose.yml push
