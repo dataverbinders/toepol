@@ -1,0 +1,15 @@
+version: "3.7"
+
+services:
+  bag-agent:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    entrypoint: ["/bin/sh", "-c"]
+    restart: unless-stopped
+    command: |
+      # docker login $registry_url -u $registry_username -p $registry_password
+      prefect auth login --key $prefect_api_key
+      prefect agent docker start --name bag-agent --label -bag --env PREFECT__CLOUD_USE_LOCAL_SECRETS=false
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
