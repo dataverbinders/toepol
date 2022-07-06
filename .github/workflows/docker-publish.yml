@@ -34,7 +34,7 @@ jobs:
       - name: Auth Docker
         run: |
           gcloud auth configure-docker
-          
+                    
       - name: Create .env file
         run: |
           touch ${GITHUB_WORKSPACE}/flows/${{matrix.flow}}/.env
@@ -48,4 +48,4 @@ jobs:
           up-flags: "--build"
           
       - name: push container
-        run: docker-compose -f ./flows/${{matrix.flow}}/docker-compose.yml push
+        run: docker push ${{secrets.DOCKER_IMAGE}}:latest
