@@ -6,6 +6,7 @@ services:
         context: .
         dockerfile: Dockerfile
       entrypoint: ["/bin/sh", "-c"]
+      image: $image
       command: 
       - |
         prefect backend cloud
