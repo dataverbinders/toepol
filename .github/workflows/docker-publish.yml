@@ -18,11 +18,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        
-      - name: Setup GCloud CLI
-        uses: GoogleCloudPlatform/github-actions/setup-gcloud@main
+       
+      - name: Auth GCP
+        uses: 'google-github-actions/auth@v0'
         with:
-          service_account_key: ${{secrets.GCP_CONTAINER_REGISTRY_SA_KEY}}
+          credentials_json: ${{secrets.GCP_CONTAINER_REGISTRY_SA_KEY}}
+       
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v0'
       
       - name: Auth Docker
         run: |
