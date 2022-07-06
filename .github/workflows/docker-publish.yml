@@ -48,4 +48,4 @@ jobs:
           up-flags: "--build"
           
       - name: push container
-        run: docker push "$REGISTRY_HOSTNAME"/"${{secrets.GCP_PROJECT}}"/"${{matrix.flow}}:latest
+        run: docker push "$REGISTRY_HOSTNAME"/"${{secrets.GCP_PROJECT}}"/"${{matrix.flow}}":latest
