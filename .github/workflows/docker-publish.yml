@@ -34,6 +34,12 @@ jobs:
       - name: Auth Docker
         run: |
           gcloud auth configure-docker
+          
+      - name: Create .env file
+        run: |
+          touch ${GITHUB_WORKSPACE}/flows/${{matrix.flow}}/.env
+          echo "prefect_api_key=${{secrets.PREFECT_API_KEY}}" >> ${GITHUB_WORKSPACE}/flows/${{matrix.flow}}/.env
+          echo "docker_image=${{secrets.DOCKER_IMAGE}}" >> ${GITHUB_WORKSPACE}/flows/${{matrix.flow}}/.env
 
       - name: Build Container
         uses: isbang/compose-action@v1.1.0
