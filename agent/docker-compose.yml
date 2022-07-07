@@ -7,9 +7,13 @@ services:
       dockerfile: Dockerfile
     entrypoint: ["/bin/sh", "-c"]
     restart: unless-stopped
-    command: |
+    command: 
+    - |
+      gcloud auth activate-service-account --key-file=key.json
+      gcloud auth configure-docker
       # docker login $registry_url -u $registry_username -p $registry_password
+      prefect backend cloud
       prefect auth login --key $prefect_api_key
-      prefect agent docker start --name bag-agent --label -bag --env PREFECT__CLOUD_USE_LOCAL_SECRETS=false
+      prefect agent docker start --name bag-agent --label bag --env PREFECT__CLOUD_USE_LOCAL_SECRETS=false
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
