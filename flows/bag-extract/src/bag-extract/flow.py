@@ -12,6 +12,7 @@ from prefect.storage.github import GitHub
 from prefect.tasks.secrets import PrefectSecret
 from util.gcp.dataproc import submit_batch_job
 from util.misc import (
+    create_dir,
     download_file,
     generate_blob_directory,
     object_from_zipfile,
@@ -49,18 +50,19 @@ with Flow(
         "bag_url",
         default="https://service.pdok.nl/kadaster/adressen/atom/v1_0/downloads/lvbag-extract-nl.zip",
     )
-
     gcs_temp_bucket = Parameter("temp_bucket", default="temp-prefect-data")
     gcp_region = Parameter("gcp_region", default="europe_west_4")
 
     # Key Value Pairs
     job_config = get_key_value(key="dataproc_bag_batch_job_config")
 
+    data_dir = create_dir(DATA_DIR)
+
     # Download BAG zip
-    bag_file = download_file(bag_url, DATA_DIR, BAG_FILE_NAME)
+    bag_file = download_file(bag_url, data_dir, BAG_FILE_NAME)
 
     # Unzip main bag file
-    zipfiles = unzip(bag_file, DATA_DIR, select_extension=".zip")
+    zipfiles = unzip(bag_file, data_dir, select_extension=".zip")
 
     # Unzip object level zipfiles
     objects = object_from_zipfile.map(zipfiles)

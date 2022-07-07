@@ -8,6 +8,11 @@ from prefect.tasks.gcp.storage import GCSUpload
 
 
 @task
+def create_directory(dir):
+    os.mkdir(dir)
+    return dir
+
+@task
 def download_file(url, target_directory, target_file, write_mode="wb"):
     r = requests.get(url)
     with open(f"{target_directory}/{target_file}", write_mode) as f:
