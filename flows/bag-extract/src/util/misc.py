@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 from zipfile import ZipFile
 
@@ -41,6 +42,10 @@ def generate_blob_directory(zipfile):
 
 @task(max_retries=16, retry_delay=timedelta(seconds=5))
 def upload_to_gcs(credentials, file, bucket, folder=None):
+    print(os.getcwd())
+    print(os.listdir(os.getcwd()))
+
+
     filename = file.split("/")[-1]
     if folder is not None:
         blob = "/".join([folder, filename])
