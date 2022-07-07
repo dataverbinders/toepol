@@ -8,7 +8,7 @@ from prefect.backend import get_key_value
 from prefect.run_configs import DockerRun
 from prefect.schedules import Schedule
 from prefect.schedules.clocks import CronClock
-from prefect.storage.gcs import GCS
+from prefect.storage.github import GitHub
 from prefect.tasks.secrets import PrefectSecret
 from util.gcp.dataproc import submit_batch_job
 from util.misc import (
@@ -20,7 +20,6 @@ from util.misc import (
     upload_to_gcs,
 )
 
-
 schedule = Schedule(clocks=[CronClock("0 0 9 * *")])
 
 load_dotenv()
@@ -28,8 +27,9 @@ load_dotenv()
 with Flow(
     "bag-extract",
     #  schedule=schedule,
-    storage=GCS(
-        bucket="prefect_flows"
+    storage=GitHub(
+        repo="dataverbinders/toepol",
+        path="flows/bag-extract/src/bag-extract/flow.py",
     ),
     run_config=DockerRun(
         image=os.getenv("image"),
