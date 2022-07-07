@@ -22,8 +22,8 @@ with Flow(
     "bag-extract",
     #  schedule=schedule,
     run_config=DockerRun(
-        image=os.getenv("docker_image"),
-        labels=["bag-extract"],
+        image=os.getenv("image"),
+        labels=["bag"],
     ),
 ) as flow:
     # Constants
