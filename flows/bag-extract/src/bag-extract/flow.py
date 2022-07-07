@@ -12,7 +12,7 @@ from prefect.storage.github import GitHub
 from prefect.tasks.secrets import PrefectSecret
 from util.gcp.dataproc import submit_batch_job
 from util.misc import (
-    create_dir,
+    create_directory,
     download_file,
     generate_blob_directory,
     object_from_zipfile,
@@ -56,7 +56,7 @@ with Flow(
     # Key Value Pairs
     job_config = get_key_value(key="dataproc_bag_batch_job_config")
 
-    data_dir = create_dir(DATA_DIR)
+    data_dir = create_directory(DATA_DIR)
 
     # Download BAG zip
     bag_file = download_file(bag_url, data_dir, BAG_FILE_NAME)
