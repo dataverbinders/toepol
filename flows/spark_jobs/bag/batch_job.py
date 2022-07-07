@@ -104,9 +104,6 @@ def export_schema_spark_df(
     )
 
     # print(df.schema)
-    
-    # with open(f"{os.getcwd()}/{object_type}_schema.json", "w") as wr:
-    #     json.dump(df.schema.jsonValue(), wr)
 
     export_schema(object_type, df.schema)
 
@@ -126,13 +123,6 @@ def create_spark_df(
     :type schema_def: StructType
     :rtype: DataFrame
     """
-    # df = (
-    #     spark.read.format("xml")
-    #     .option("rootTag", "sl-bag-extract:bagStand")
-    #     .option("rowTag", "sl-bag-extract:bagObject")
-    #     .option("path", files)
-    #     .load()
-    # )
 
     df = (
         spark.read.format("xml")
@@ -366,7 +356,6 @@ def convert_vlak(
             positions = row["Objecten:geometrie"]["Objecten:vlak"][
                 "gml:Polygon"
             ]["gml:exterior"]["gml:LinearRing"]["gml:posList"]["_VALUE"]
-            # print(f"Positions: {positions}")
 
             exterior_lr = create_linear_ring(positions, transformer, dimension)
 
@@ -379,7 +368,6 @@ def convert_vlak(
                 interior_lrs = []
 
                 if interior is not None:
-                    # print(type(interior))
                     if isinstance(interior, list):
                         for interior_row in interior:
                             positions = interior_row["gml:LinearRing"]["gml:posList"][
@@ -398,10 +386,7 @@ def convert_vlak(
             else:
                 polygon = geometry.Polygon(exterior_lr)    
 
-            # polygon = geometry.Polygon(exterior_lr, interior_lrs)
             new_polygons.append((id, voorkomen, wkt.dumps(polygon)))
-    
-    # print(new_polygons)
 
     if new_polygons:
         new_df = spark.createDataFrame(
@@ -543,9 +528,6 @@ def store_df_as_parquet(df: DataFrame, object_type: str, data_dir: str) -> str:
 
 
 def store_df_on_gcs(df: DataFrame, target_blob: str):
-    # df.repartition(1).write.format("parquet").mode("overwrite").save(
-    #     target_blob
-    # )
     df.write.format("parquet").mode("overwrite").save(
         target_blob
     )
@@ -579,11 +561,9 @@ if __name__ == "__main__":
                 if val == "Verblijfsobject":
                     df_columns = df.select("geometry.*").columns
                     if "geo_polygon" not in df_columns:
-                        print("Polygon is empty")
                         df = df.withColumn("geometry", struct(*[lit(None).cast("string").alias("geo_polygon"), col("geometry")["geo_point"].alias("geo_point")]))
                     
                     if "geo_point" not in df_columns:
-                        print("Point is empty")
                         df = df.withColumn("geometry", struct(*[col("geometry")["geo_polygon"].alias("geo_polygon"), lit(None).cast("string").alias("geo_point")]))
                     
                 store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{val}/part_{int(i / num_files)}")
