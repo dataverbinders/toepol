@@ -75,13 +75,13 @@ with Flow(
     # Upload files for spark job
     py_file = upload_to_gcs(
         gcp_credentials,
-        "spark/batch_job.py",
+        "/opt/prefect/spark/batch_job.py",
         gcs_temp_bucket,
         "bag/dataproc",
     )
     jar_file = upload_to_gcs(
         gcp_credentials,
-        "spark/spark-xml_2.12-0.14.0.jar",
+        "/opt/prefect/spark/spark-xml_2.12-0.14.0.jar",
         gcs_temp_bucket,
         "bag/dataproc",
     )
