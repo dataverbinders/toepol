@@ -36,6 +36,10 @@ with Flow(
         labels=["bag"],
     ),
 ) as flow:
+    print(os.getcwd())
+    print(os.listdir(os.getcwd()))
+
+
     # Constants
     DATA_DIR = "data"
     BAG_FILE_NAME = "lvbag-extract-nl.zip"
