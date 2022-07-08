@@ -35,6 +35,7 @@ with Flow(
     run_config=DockerRun(
         image=os.getenv("image"),
         labels=["bag"],
+        env={"PREFECT__CLOUD__HEARTBEAT_MODE": "thread"}
     ),
 ) as flow:
 
