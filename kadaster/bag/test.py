@@ -1,131 +1,96 @@
+import json, os
+import prefect
+from prefect import task,Parameter, Flow
+from google.cloud import storage
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.functions import col
-from pyspark.sql.types import *
-from math import floor
-from pyspark.sql.functions import udf
-from datetime import datetime
+from pyspark.sql.types import StructType
 
-def init_spark_session():
-    """Initializes and returns a PySpark session."""
+
+def export_schema(object_type, df_schema, gcp_credential):
+    client = storage.Client.from_service_account_json(
+        gcp_credential
+    )
+    bucket = client.bucket("temp-prefect-data")
+    blob = bucket.blob(f"bag/schemas/{object_type}_schema.json")
+    blob.upload_from_string(
+        data=json.dumps(df_schema.jsonValue()),
+        content_type="application/json",
+    )
+
+@task
+def load_schema(object_type, gcp_credential):
+    client = storage.Client.from_service_account_json(
+        gcp_credential
+    )
+    bucket = client.bucket("temp-prefect-data")
+    blob = bucket.blob(f"bag/schemas/{object_type}_schema.json")
+
+    with blob.open(mode="rt") as schema_file:
+        df_schema = StructType.fromJson(json.load(schema_file))
+    
+    return df_schema
+
+
+@task
+def export_schema_spark_df(
+    object_type: str, gcp_credential
+) -> DataFrame:
+    """Given a string containing xml files, returns the schema of the DataFrame..
+
+    :param spark: a spark session
+    :type spark: SparkSession
+    :param object_type: the type of object in the given files. eg: 'Woonplaats'
+    :type object_type: str
+    :param files: a string containing a concatenation of the XML files
+    :type files: str
+    :rtype: DataFrame
+    """
     spark = (
-        SparkSession.builder.appName("test")
+        SparkSession.builder.appName("bag2gcs")
+        .config("spark.jars.packages", "com.databricks:spark-xml_2.12:0.14.0")
         .getOrCreate()
     )
     spark.conf.set("temporaryGcsBucket", "temp-data-pyspark")
     spark.conf.set("spark.sql.parquet.datetimeRebaseModeInWrite", "CORRECTED")
-    spark.conf.set(
-        "spark.sql.parquet.datetimeRebaseModeInWrite", "CORRECTED"
+
+    
+    df = spark.read.load(f"{os.getcwd()}/data/bag_output/Nummeraanduiding/*.parquet")
+
+    # print(df.schema)
+    
+    # with open(f"{os.getcwd()}/{object_type}_schema.json", "w") as wr:
+    #     json.dump(df.schema.jsonValue(), wr)
+
+    export_schema(object_type, df.schema, gcp_credential)
+
+
+@task
+def test(schema_df):
+    print(schema_df)
+    spark = (
+        SparkSession.builder.appName("bag2gcs")
+        .config("spark.jars.packages", "com.databricks:spark-xml_2.12:0.14.0")
+        .getOrCreate()
     )
+    spark.conf.set("temporaryGcsBucket", "temp-data-pyspark")
+    spark.conf.set("spark.sql.parquet.datetimeRebaseModeInWrite", "CORRECTED")
+
     
-    return spark
+    df = spark.read.schema(schema_df).load(f"{os.getcwd()}/Documents/work_repos/toepol/data/bag_output/Nummeraanduiding/*.parquet")
+
+    logger.info(df.count())
 
 
-# @udf(returnType=FloatType())
-def index_to_lat(index: int) -> float:
-    return 50.75 + ((53.7 - 50.75) / 44700) * floor(index / 32700)
-
-
-# @udf(returnType=FloatType())
-def index_to_long(index: int) -> float:
-    return 3.2 + ((7.22 - 3.2) / 32700) * (index % 32700)
-
-
-def store_df_on_gcs(df: DataFrame, target_blob: str):
-    df.write.format("parquet").mode("overwrite").save(
-        target_blob
-    )
-
-
-def test(spark):
-    total_dict = list()
-
-    for i in range(1, 100):
-        if i % 10 == 0:
-            # print(f"After 10: {total_dict}")
-            # print(len(total_dict))
-            # print("--------------------------------------------------\n")
-            df_schema = StructType([
-                StructField("id", IntegerType(), True),
-                StructField("lat", FloatType(), True),
-                StructField("long", FloatType(), True)
-            ])
+with Flow("test_flow") as test_flow:
+    logger = prefect.context.get("logger")
+    # gcp_credentials = "/Users/eddylim/Documents/gcp_keys/prefect_key.json"
+    gcp_credentials = Parameter("gcp_credentials", "/Users/eddylim/Documents/gcp_keys/prefect_key.json")
+    bag_object = Parameter("bag_object", "Nummeraanduiding")
+    # export_schema_spark_df("Nummeraanduiding", gcp_credentials)
+    df_schema = load_schema(bag_object, gcp_credentials)
+    test(df_schema)
     
-            df = spark.createDataFrame(total_dict, df_schema)
-            # print(f"Create df at {datetime.now()}")
-            # df.printSchema()
-            df.show()
-            df.write.mode("append").parquet("/Users/eddylim/Documents/work_repos/toepol/data/geo_index2")
-            total_dict = list()
-            
-        total_dict.append(
-            {"id": i,
-            "lat": index_to_lat(i),
-            "long": index_to_long(i)}
-        )
-
-
-def create_indx_table(spark):
-    # test = list(range(0, 1000))
-    total_dict = list()
-
-    # df = spark.createDataFrame(test, IntegerType())
-
-    # df = df.withColumn("id", col("value"))
-    # df = df.drop("value")
-    # df = df.withColumn("lat", index_to_lat(col("id")))
-    # df = df.withColumn("long", index_to_long(col("id")))
-    # df.show()
-    # df.write.mode("overwrite").parquet("/Users/eddylim/Documents/work_repos/toepol/data/geo_index")
-
-    # for i in range(1, 1185900001):
-    # for i in range(1, 5000001):
-    for i in range(1, 100000001):
-        # if i % 5000000 == 0:
-        if i % 2000000 == 0:
-            df_schema = StructType([
-                StructField("id", IntegerType(), True),
-                StructField("lat", FloatType(), True),
-                StructField("long", FloatType(), True)
-            ])
-    
-            df = spark.createDataFrame(total_dict, df_schema)
-            print(f"Create df at {datetime.now()}")
-            # df.printSchema()
-            # df.show()
-            # df.write.mode("append").parquet(f"/Users/eddylim/Documents/work_repos/toepol/data/geo_index2/test_{i}")
-            df.write.mode("append").parquet("/Users/eddylim/Documents/work_repos/toepol/data/geo_index2/")
-            total_dict = list()
-            print(f"Created indices with lat and long coordinates until {i} at {datetime.now()}")
-            
-        total_dict.append(
-            {"id": i,
-            "lat": index_to_lat(i),
-            "long": index_to_long(i)}
-        )
-
-    print(f"Created all indices with lat and long coordinates at {datetime.now()}")
-
-    # df_schema = StructType([
-    #     StructField("id", IntegerType(), True),
-    #     StructField("lat", FloatType(), True),
-    #     StructField("long", FloatType(), True)
-    # ])
-    
-    # df = spark.createDataFrame(total_dict, df_schema)
-    # print(f"Create df at {datetime.now()}")
-    # df.printSchema()
-    # df.show()
-    # df.write.mode("append").parquet("/Users/eddylim/Documents/work_repos/toepol/data/geo_index2")
-
-    # target = "gs://dataverbinders-dev/kadaster/bag/geoIndex"
-    # store_df_on_gcs(df, target)
-
 
 if __name__ == "__main__":
-    spark = init_spark_session()
-    create_indx_table(spark)
-
-    # df = spark.read.load("/Users/eddylim/Documents/work_repos/toepol/data/geo_index2/")
-    # df.show()
-
-    # test(spark)
+    test_flow.register(project_name="toepol", labels=["test"])
+    # test_flow.run()
