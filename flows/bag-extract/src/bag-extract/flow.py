@@ -106,5 +106,5 @@ with Flow(
         #  dependencies=[uris, py_file, jar_file],
     #  )
 
-
-flow.register("toepol")
+if __name__ == "__main__":
+    flow.register("toepol")
