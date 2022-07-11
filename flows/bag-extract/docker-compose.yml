@@ -14,3 +14,5 @@ services:
         python3 /opt/prefect/bag-extract/flow.py
       env_file:
       - .env
+      volumes:
+      - ${HOME}/flow_vol:/opt/prefect
