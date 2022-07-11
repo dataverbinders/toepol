@@ -11,6 +11,7 @@ from prefect.schedules.clocks import CronClock
 from prefect.storage.github import GitHub
 from prefect.tasks.secrets import PrefectSecret
 from util.gcp.dataproc import submit_batch_job
+from util.gcp import gcs
 from util.misc import (
     create_directory,
     download_file,
@@ -35,7 +36,7 @@ with Flow(
     run_config=DockerRun(
         image=os.getenv("image"),
         labels=["bag"],
-        env={"PREFECT__CLOUD__HEARTBEAT_MODE": "thread"}
+        env={"PREFECT__CLOUD__HEARTBEAT_MODE": "thread"},
     ),
 ) as flow:
 
@@ -71,8 +72,8 @@ with Flow(
 
     # Upload XML files to GCS
     paths = generate_blob_directory.map(zipfiles)
-    uris = upload_files_to_gcs(
-        gcp_credentials, mapped(xml_files), gcs_temp_bucket, mapped(paths)
+    uris = gcs.upload_files_to_gcs(
+        mapped(xml_files), mapped(paths), gcp_credentials, gcs_temp_bucket
     )
 
     # Upload files for spark job
