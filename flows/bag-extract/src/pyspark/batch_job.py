@@ -11,13 +11,13 @@ import json
 
 # Object map
 object_map = {
-    # "WPL": "Woonplaats",
+    "WPL": "Woonplaats",
     # "OPR": "OpenbareRuimte",
     # "NUM": "Nummeraanduiding",
     # "LIG": "Ligplaats",
     # "STA": "Standplaats",
     # "PND": "Pand",
-    "VBO": "Verblijfsobject",
+    # "VBO": "Verblijfsobject",
 }
 
 
@@ -570,7 +570,7 @@ if __name__ == "__main__":
                 del df
 
         else:
-            df = create_spark_df(spark, val, files[1])
+            df = create_spark_df_schemaless(spark, val, files[1])
             df = convert_geometry(df, spark)
             target = f"gs://dataverbinders-dev/kadaster/bag/{val}"
             store_df_on_gcs(df, target)
