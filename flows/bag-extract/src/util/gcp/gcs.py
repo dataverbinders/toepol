@@ -21,8 +21,8 @@ def get_storage_bucket(client, bucket):
 @task
 def upload_file_to_blob(file, blob_name, bucket):
     blob = storage.Blob(blob_name, bucket)
-    with open(file, "rt", encoding="ISO-8859-1") as f:
-        blob.upload_from_file(f)
+    #  with open(file, "rt", encoding="ISO-8859-1") as f:
+    blob.upload_from_filename(file)
     return blob_name
 
 
