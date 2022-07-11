@@ -78,7 +78,7 @@ def load_schema(object_type):
 
     with blob.open(mode="rt") as schema_file:
         df_schema = StructType.fromJson(json.load(schema_file))
-    
+
     return df_schema
 
 
@@ -191,7 +191,7 @@ def convert_point(point: str, transformer: Transformer) -> geometry.Point:
     """
     x, y, _ = point.split()
     x, y = transform_coords(x, y, transformer)
-    p = wkt.dumps(geometry.Point(x, y))
+    p = wkt.dumps(geometry.Point(y, x))
     return p
 
 
@@ -242,7 +242,7 @@ def convert_points(
         if row["Objecten:geometrie"]["Objecten:punt"] is not None:
             point = row["Objecten:geometrie"]["Objecten:punt"]["gml:Point"][
                 "gml:pos"
-            ] 
+            ]
             points.append((id, voorkomen, convert_point(point, transformer)))
 
     points_df = spark.createDataFrame(points, ["id", "voorkomen", "geo_point"])
@@ -361,7 +361,7 @@ def convert_vlak(
 
             # interiors
             if "gml:interior" in row["Objecten:geometrie"]["Objecten:vlak"]["gml:Polygon"]:
-                
+
                 interior = row["Objecten:geometrie"]["Objecten:vlak"][
                     "gml:Polygon"
                 ]["gml:interior"]
@@ -377,14 +377,14 @@ def convert_vlak(
                                 positions, transformer, dimension
                             )
                             interior_lrs.append(interior_lr)
-                    else:    
+                    else:
                         positions = interior["gml:LinearRing"]["gml:posList"]["_VALUE"]
                         interior_lr = create_linear_ring(positions, transformer)
                         interior_lrs.append(interior_lr)
-                
+
                 polygon = geometry.Polygon(exterior_lr, interior_lrs)
             else:
-                polygon = geometry.Polygon(exterior_lr)    
+                polygon = geometry.Polygon(exterior_lr)
 
             new_polygons.append((id, voorkomen, wkt.dumps(polygon)))
 
@@ -502,7 +502,7 @@ def convert_geometry(df: DataFrame, spark: SparkSession) -> DataFrame:
         df = df.withColumn("geometry", struct(*new_geo_cols))
         for col in new_geo_cols:
             df = df.drop(col)
-    
+
 
     return df
 
@@ -562,10 +562,10 @@ if __name__ == "__main__":
                     df_columns = df.select("geometry.*").columns
                     if "geo_polygon" not in df_columns:
                         df = df.withColumn("geometry", struct(*[lit(None).cast("string").alias("geo_polygon"), col("geometry")["geo_point"].alias("geo_point")]))
-                    
+
                     if "geo_point" not in df_columns:
                         df = df.withColumn("geometry", struct(*[col("geometry")["geo_polygon"].alias("geo_polygon"), lit(None).cast("string").alias("geo_point")]))
-                    
+
                 store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{val}/part_{int(i / num_files)}")
                 del df
 
@@ -574,7 +574,7 @@ if __name__ == "__main__":
             df = convert_geometry(df, spark)
             target = f"gs://dataverbinders-dev/kadaster/bag/{val}"
             store_df_on_gcs(df, target)
-    
+
     # for key, val in object_map.items():
     #     print(f"Processing {val}")
     #     files = get_file_uris(key)
