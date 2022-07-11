@@ -76,9 +76,9 @@ with Flow(
 
     # Upload XML files to GCS
     paths = generate_blob_directory.map(zipfiles)
-    print_var(mapped(objects))
-    print_var(mapped(xml_files))
-    print_var(mapped(paths))
+    blob_names = generate_blob_names.map(paths, xml_files)
+    print_var.map(blob_names)
+
 
     #  uris = gcs.upload_files_to_gcs(
         #  mapped(xml_files), mapped(paths), gcp_credentials, gcs_temp_bucket

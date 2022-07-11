@@ -68,3 +68,8 @@ def upload_files_to_gcs(credentials, files, bucket, folder=None):
     for file in files:
         uris.append(upload_to_gcs.run(credentials, file, bucket, folder))
     return uris
+
+@task
+def generate_blob_names(path, files):
+    blob_names = [f"{path}/{file.split('/')[-1]"} for file in files]
+    return blob_names
