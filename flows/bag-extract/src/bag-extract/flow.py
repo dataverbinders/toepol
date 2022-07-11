@@ -26,6 +26,10 @@ schedule = Schedule(clocks=[CronClock("0 0 9 * *")])
 
 load_dotenv()
 
+@task
+def print_var(var):
+    print(var)
+
 with Flow(
     "bag-extract",
     #  schedule=schedule,
@@ -72,6 +76,11 @@ with Flow(
 
     # Upload XML files to GCS
     paths = generate_blob_directory.map(zipfiles)
+    print_var(objects)
+    print_var(xml_files)
+    print_var(paths)
+    return
+
     uris = gcs.upload_files_to_gcs(
         mapped(xml_files), mapped(paths), gcp_credentials, gcs_temp_bucket
     )
