@@ -17,6 +17,7 @@ from util.misc import (
     generate_blob_directory,
     generate_blob_names,
     object_from_zipfile,
+    upload_to_gcs,
     unzip,
 )
 
