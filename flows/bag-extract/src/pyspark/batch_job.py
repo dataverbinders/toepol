@@ -175,7 +175,7 @@ def transform_coords(x: int, y: int, transformer: Transformer) -> List[int]:
     :rtype: List[int]
     """
     x, y = transformer.transform(x, y)
-    return [x, y]
+    return [y, x]
 
 
 def convert_point(point: str, transformer: Transformer) -> geometry.Point:
@@ -191,7 +191,7 @@ def convert_point(point: str, transformer: Transformer) -> geometry.Point:
     """
     x, y, _ = point.split()
     x, y = transform_coords(x, y, transformer)
-    p = wkt.dumps(geometry.Point(y, x))
+    p = wkt.dumps(geometry.Point(x, y))
     return p
 
 
