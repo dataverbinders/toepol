@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
     paths-ignore:
       - '.github**'
+      - '.gitignore'
       
 env:
   REGISTRY_HOSTNAME: eu.gcr.io
