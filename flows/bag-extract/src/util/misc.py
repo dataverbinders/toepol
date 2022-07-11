@@ -71,5 +71,5 @@ def upload_files_to_gcs(credentials, files, bucket, folder=None):
 
 @task
 def generate_blob_names(path, files):
-    blob_names = [f"{path}/{file.split('/')[-1]"} for file in files]
+    blob_names = [f"{path}/{file.split('/')[-1]}" for file in files]
     return blob_names
