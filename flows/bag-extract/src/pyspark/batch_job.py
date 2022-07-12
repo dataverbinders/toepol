@@ -12,12 +12,12 @@ import json
 # Object map
 object_map = {
     "WPL": "Woonplaats",
-    # "OPR": "OpenbareRuimte",
-    # "NUM": "Nummeraanduiding",
-    # "LIG": "Ligplaats",
-    # "STA": "Standplaats",
-    # "PND": "Pand",
-    # "VBO": "Verblijfsobject",
+    "OPR": "OpenbareRuimte",
+    "NUM": "Nummeraanduiding",
+    "LIG": "Ligplaats",
+    "STA": "Standplaats",
+    "PND": "Pand",
+    "VBO": "Verblijfsobject",
 }
 
 
