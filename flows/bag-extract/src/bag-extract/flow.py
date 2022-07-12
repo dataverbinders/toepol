@@ -102,7 +102,7 @@ with Flow(
             "bag/dataproc",
         )
 
-    with case(eval_bool(download_new_bag), True):
+    with case(eval_bool(download_new_bag), False):
         uris2 = None
         py_file2 = None
         jar_file2 = None
