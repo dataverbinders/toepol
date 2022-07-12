@@ -31,9 +31,11 @@ load_dotenv()
 def print_var(var):
     print(var)
 
+
 @task
 def eval_bool(b):
     return b
+
 
 with Flow(
     "bag-extract",
@@ -48,7 +50,6 @@ with Flow(
         env={"PREFECT__CLOUD__HEARTBEAT_MODE": "thread"},
     ),
 ) as flow:
-
     # Constants
     DATA_DIR = "data"
     BAG_FILE_NAME = "lvbag-extract-nl.zip"
@@ -70,7 +71,9 @@ with Flow(
 
     data_dir = create_directory(DATA_DIR)
 
-    with case(eval_bool(download_new_bag), True):
+    refresh_bag = eval_bool(download_new_bag)
+
+    with case(refresh_bag, True):
         # Download BAG zip
         bag_file = download_file(bag_url, data_dir, BAG_FILE_NAME)
 
@@ -85,7 +88,10 @@ with Flow(
         paths = generate_blob_directory.map(zipfiles)
         blob_names = generate_blob_names.map(paths, xml_files)
         uris1 = gcs.upload_files_to_gcs(
-            mapped(xml_files), mapped(blob_names), gcp_credentials, gcs_temp_bucket
+            mapped(xml_files),
+            mapped(blob_names),
+            gcp_credentials,
+            gcs_temp_bucket,
         )
 
         # Upload files for spark job
@@ -102,10 +108,10 @@ with Flow(
             "bag/dataproc",
         )
 
-    with case(eval_bool(download_new_bag), False):
-        uris2 = None
-        py_file2 = None
-        jar_file2 = None
+    with case(refresh_bag, False):
+        uris2 = []
+        py_file2 = ""
+        jar_file2 = ""
 
     uris = merge(uris1, uris2)
     py_file = merge(py_file1, py_file2)
