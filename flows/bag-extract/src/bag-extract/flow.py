@@ -68,7 +68,7 @@ with Flow(
         default="https://service.pdok.nl/kadaster/adressen/atom/v1_0/downloads/lvbag-extract-nl.zip",
     )
     gcs_temp_bucket = Parameter("temp_bucket", default="temp-prefect-data")
-    gcp_region = Parameter("gcp_region", default="europe_west_4")
+    gcp_region = Parameter("gcp_region", default="europe-west4")
     download_new_bag = Parameter("download_new_bag", default=True)
 
     # Key Value Pairs
