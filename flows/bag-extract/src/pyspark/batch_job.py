@@ -533,7 +533,7 @@ def store_df_on_gcs(df: DataFrame, target_blob: str):
     )
 
 
-if __name__ == "__main__":
+def main():
     spark = init_spark_session()
     data_dir = "data"
 
@@ -590,3 +590,7 @@ if __name__ == "__main__":
 
     #         df = convert_geometry(df, spark)
     #         store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{val}/part_{int(i / num_files)}")
+
+
+if __name__ == "__main__":
+    main()
