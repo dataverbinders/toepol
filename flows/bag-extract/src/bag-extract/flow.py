@@ -37,6 +37,11 @@ def eval_bool(b):
     return b
 
 
+@task
+def dummy_task():
+    return None
+
+
 with Flow(
     "bag-extract",
     #  schedule=schedule,
@@ -109,9 +114,10 @@ with Flow(
         )
 
     with case(refresh_bag, False):
-        uris2 = []
-        py_file2 = ""
-        jar_file2 = ""
+        uris2 = dummy_task()
+        py_file2 = dummy_task()
+        jar_file2 = dummy_task()
+
 
     uris = merge(uris1, uris2)
     py_file = merge(py_file1, py_file2)
