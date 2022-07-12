@@ -30,6 +30,9 @@ load_dotenv()
 def print_var(var):
     print(var)
 
+@task
+def eval_bool(b):
+    return b
 
 with Flow(
     "bag-extract",
@@ -59,42 +62,48 @@ with Flow(
     )
     gcs_temp_bucket = Parameter("temp_bucket", default="temp-prefect-data")
     gcp_region = Parameter("gcp_region", default="europe_west_4")
+    download_new_bag = Parameter("download_new_bag", default=True)
 
     # Key Value Pairs
     job_config = get_key_value(key="dataproc_bag_batch_job_config")
 
     data_dir = create_directory(DATA_DIR)
 
-    # Download BAG zip
-    bag_file = download_file(bag_url, data_dir, BAG_FILE_NAME)
+    if eval_bool(download_new_bag):
+        # Download BAG zip
+        bag_file = download_file(bag_url, data_dir, BAG_FILE_NAME)
 
-    # Unzip main bag file
-    zipfiles = unzip(bag_file, data_dir, select_extension=".zip")
+        # Unzip main bag file
+        zipfiles = unzip(bag_file, data_dir, select_extension=".zip")
 
-    # Unzip object level zipfiles
-    objects = object_from_zipfile.map(zipfiles)
-    xml_files = unzip.map(zipfiles, objects)
+        # Unzip object level zipfiles
+        objects = object_from_zipfile.map(zipfiles)
+        xml_files = unzip.map(zipfiles, objects)
 
-    # Upload XML files to GCS
-    paths = generate_blob_directory.map(zipfiles)
-    blob_names = generate_blob_names.map(paths, xml_files)
-    uris = gcs.upload_files_to_gcs(
-        mapped(xml_files), mapped(blob_names), gcp_credentials, gcs_temp_bucket
-    )
+        # Upload XML files to GCS
+        paths = generate_blob_directory.map(zipfiles)
+        blob_names = generate_blob_names.map(paths, xml_files)
+        uris = gcs.upload_files_to_gcs(
+            mapped(xml_files), mapped(blob_names), gcp_credentials, gcs_temp_bucket
+        )
 
-    # Upload files for spark job
-    py_file = upload_to_gcs(
-        gcp_credentials,
-        "/opt/prefect/pyspark/batch_job.py",
-        gcs_temp_bucket,
-        "bag/dataproc",
-    )
-    jar_file = upload_to_gcs(
-        gcp_credentials,
-        "/opt/prefect/pyspark/spark-xml_2.12-0.14.0.jar",
-        gcs_temp_bucket,
-        "bag/dataproc",
-    )
+        # Upload files for spark job
+        py_file = upload_to_gcs(
+            gcp_credentials,
+            "/opt/prefect/pyspark/batch_job.py",
+            gcs_temp_bucket,
+            "bag/dataproc",
+        )
+        jar_file = upload_to_gcs(
+            gcp_credentials,
+            "/opt/prefect/pyspark/spark-xml_2.12-0.14.0.jar",
+            gcs_temp_bucket,
+            "bag/dataproc",
+        )
+    else:
+        uris = None
+        py_file = None
+        jar_file = None
 
     # Run batch job
     batch_result = submit_batch_job(
