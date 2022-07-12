@@ -60,7 +60,7 @@ with Flow(
     BAG_FILE_NAME = "lvbag-extract-nl.zip"
 
     # Secrets
-    gcp_credentials = PrefectSecret("GCP_CREDENTIALS")
+    #  gcp_credentials = PrefectSecret("GCP_CREDENTIALS")
 
     # Parameters
     bag_url = Parameter(
@@ -79,6 +79,8 @@ with Flow(
     refresh_bag = eval_bool(download_new_bag)
 
     with case(refresh_bag, True):
+        gcp_credentials1 = PrefectSecret("GCP_CREDENTIALS")
+
         # Download BAG zip
         bag_file = download_file(bag_url, data_dir, BAG_FILE_NAME)
 
@@ -95,30 +97,31 @@ with Flow(
         uris1 = gcs.upload_files_to_gcs(
             mapped(xml_files),
             mapped(blob_names),
-            gcp_credentials,
+            gcp_credentials1,
             gcs_temp_bucket,
         )
 
         # Upload files for spark job
         py_file1 = upload_to_gcs(
-            gcp_credentials,
+            gcp_credentials1,
             "/opt/prefect/pyspark/batch_job.py",
             gcs_temp_bucket,
             "bag/dataproc",
         )
         jar_file1 = upload_to_gcs(
-            gcp_credentials,
+            gcp_credentials1,
             "/opt/prefect/pyspark/spark-xml_2.12-0.14.0.jar",
             gcs_temp_bucket,
             "bag/dataproc",
         )
 
     with case(refresh_bag, False):
+        gcp_credentials2 = PrefectSecret("GCP_CREDENTIALS")
         uris2 = dummy_task()
         py_file2 = dummy_task()
         jar_file2 = dummy_task()
 
-
+    gcp_credentials = merge(gcp_credentials1, gcp_credentials2)
     uris = merge(uris1, uris2)
     py_file = merge(py_file1, py_file2)
     jar_file = merge(jar_file1, jar_file2)
