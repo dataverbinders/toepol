@@ -3,7 +3,7 @@ import os
 import prefect
 from dotenv import load_dotenv
 from prefect import Flow, Parameter, mapped, task, case
-from prefect.tasks.flow_control import merge
+from prefect.tasks.control_flow import merge
 from prefect.backend import get_key_value
 from prefect.run_configs import DockerRun
 from prefect.schedules import Schedule
@@ -101,6 +101,7 @@ with Flow(
             gcs_temp_bucket,
             "bag/dataproc",
         )
+
     with case(eval_bool(download_new_bag), True):
         uris2 = None
         py_file2 = None
