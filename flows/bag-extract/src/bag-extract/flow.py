@@ -2,7 +2,8 @@ import os
 
 import prefect
 from dotenv import load_dotenv
-from prefect import Flow, Parameter, mapped, task
+from prefect import Flow, Parameter, mapped, task, case
+from prefect.tasks.flow_control import merge
 from prefect.backend import get_key_value
 from prefect.run_configs import DockerRun
 from prefect.schedules import Schedule
@@ -69,7 +70,7 @@ with Flow(
 
     data_dir = create_directory(DATA_DIR)
 
-    if eval_bool(download_new_bag):
+    with case(eval_bool(download_new_bag), True):
         # Download BAG zip
         bag_file = download_file(bag_url, data_dir, BAG_FILE_NAME)
 
@@ -83,27 +84,31 @@ with Flow(
         # Upload XML files to GCS
         paths = generate_blob_directory.map(zipfiles)
         blob_names = generate_blob_names.map(paths, xml_files)
-        uris = gcs.upload_files_to_gcs(
+        uris1 = gcs.upload_files_to_gcs(
             mapped(xml_files), mapped(blob_names), gcp_credentials, gcs_temp_bucket
         )
 
         # Upload files for spark job
-        py_file = upload_to_gcs(
+        py_file1 = upload_to_gcs(
             gcp_credentials,
             "/opt/prefect/pyspark/batch_job.py",
             gcs_temp_bucket,
             "bag/dataproc",
         )
-        jar_file = upload_to_gcs(
+        jar_file1 = upload_to_gcs(
             gcp_credentials,
             "/opt/prefect/pyspark/spark-xml_2.12-0.14.0.jar",
             gcs_temp_bucket,
             "bag/dataproc",
         )
-    else:
-        uris = None
-        py_file = None
-        jar_file = None
+    with case(eval_bool(download_new_bag), True):
+        uris2 = None
+        py_file2 = None
+        jar_file2 = None
+
+    uris = merge(uris1, uris2)
+    py_file = merge(py_file1, py_file2)
+    jar_file = merge(jar_file1, jar_file2)
 
     # Run batch job
     batch_result = submit_batch_job(
