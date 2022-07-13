@@ -133,6 +133,6 @@ with Flow(
         dependencies=[uris, py_file, jar_file],
     )
 
-prefect_project = "toepol" if os.getenv("production") else "dev-toepol"
+prefect_project = "toepol" if os.getenv("production") == "True" else "dev-toepol"
 
 flow.register(prefect_project)
