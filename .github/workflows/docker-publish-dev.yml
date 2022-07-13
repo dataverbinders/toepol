@@ -1,0 +1,53 @@
+name: Docker Build and Push
+
+on:
+  pull-request:
+    branches: [ "main" ]
+    paths-ignore:
+      - '.github**'
+      - '.gitignore'
+      
+env:
+  REGISTRY_HOSTNAME: eu.gcr.io
+
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        flow: [bag-extract]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+       
+      - name: Auth GCP
+        uses: 'google-github-actions/auth@v0'
+        with:
+          credentials_json: ${{secrets.GCP_CONTAINER_REGISTRY_SA_KEY}}
+       
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v0'
+      
+      - name: Auth Docker
+        run: |
+          gcloud auth configure-docker
+                    
+      - name: Create .env file
+        run: |
+          touch ${GITHUB_WORKSPACE}/flows/${{matrix.flow}}/.env
+          echo "prefect_api_key=${{secrets.PREFECT_API_KEY}}" >> ${GITHUB_WORKSPACE}/flows/${{matrix.flow}}/.env
+          echo "image=${REGISTRY_HOSTNAME}/${{secrets.GCP_PROJECT}}/${{matrix.flow}}-dev:latest" >> ${GITHUB_WORKSPACE}/flows/${{matrix.flow}}/.env
+          echo "production=False" >> ${GITHUB_WORKSPACE}/flows/${{matrix.flow}}/.env
+
+      - name: Build Container
+        uses: isbang/compose-action@v1.1.0
+        with:
+          compose-file: "./flows/${{matrix.flow}}/docker-compose.yml"
+          up-flags: "--build"
+          
+      - name: push container
+        run: docker push "$REGISTRY_HOSTNAME"/"${{secrets.GCP_PROJECT}}"/"${{matrix.flow}}-dev":latest
