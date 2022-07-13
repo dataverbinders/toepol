@@ -1,6 +1,5 @@
 import os
 
-import prefect
 from dotenv import load_dotenv
 from prefect import Flow, Parameter, mapped, task, case
 from prefect.tasks.control_flow import merge
@@ -134,4 +133,6 @@ with Flow(
         dependencies=[uris, py_file, jar_file],
     )
 
-flow.register("toepol")
+prefect_project = "toepol" if os.getenv("production") else "dev-toepol"
+
+flow.register(prefect_project)
