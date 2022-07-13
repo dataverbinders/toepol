@@ -41,6 +41,9 @@ def dummy_task():
     return None
 
 
+dir_prefix = "" if os.getenv("production") else "dev-"
+
+
 with Flow(
     "bag-extract",
     #  schedule=schedule,
@@ -66,7 +69,9 @@ with Flow(
         "bag_url",
         default="https://service.pdok.nl/kadaster/adressen/atom/v1_0/downloads/lvbag-extract-nl.zip",
     )
-    gcs_temp_bucket = Parameter("temp_bucket", default="temp-prefect-data")
+    gcs_temp_bucket = Parameter(
+        "temp_bucket", default=f"{dir_prefix}temp-prefect-data"
+    )
     gcp_region = Parameter("gcp_region", default="europe-west4")
     download_new_bag = Parameter("download_new_bag", default=True)
 
