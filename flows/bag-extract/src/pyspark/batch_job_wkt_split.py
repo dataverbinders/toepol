@@ -41,7 +41,6 @@ def get_file_uris(object_key: str) -> str:
 
 def get_folder_names(object):
     client = storage.Client()
-    
     bucket = client.get_bucket(bucket_or_name="dataverbinders-dev")
     blob_iter = bucket.list_blobs(prefix=f"kadaster/bag/{object}/", delimiter="/")
 
@@ -63,16 +62,14 @@ def get_underlying_files(prefix):
     return files
 
 
-def load_parts_parquet(spark, path_parquet):
-    df = spark.read.load(path_parquet)
-
-    return df
-
-
 def store_df_on_gcs(df: DataFrame, target_blob: str):
     df.write.format("parquet").mode("overwrite").save(
         target_blob
     )
+    # df.repartition(1).write.format("csv").mode("overwrite").option("header", "true").save(
+    #     target_blob
+    # )
+    # df.repartition(1).write.csv(f"{target_blob}", mode="overwrite", header=True)
 
 
 def split_cols(df, geo_type):
@@ -94,7 +91,7 @@ def split_cols(df, geo_type):
 
 def split_col_geometry(df):
     geo_df_columns = df.select("geometry.*").columns
-    
+    print(geo_df_columns)
     for i in geo_df_columns:
         df = split_cols(df, i)
 
@@ -107,33 +104,31 @@ if __name__ == "__main__":
     for i in bag_objecten:
         files = get_file_uris(i)
         df = spark.read.parquet(*files)
-
         if "geometry" in df.columns:
             print(i)
             df = split_col_geometry(df)
 
             if i in ["Pand"]:
+                # df.printSchema()
                 list_parts = get_folder_names(i)
 
                 emptyRDD = spark.sparkContext.emptyRDD()
                 df_schema = df.schema
                 df_structure = spark.createDataFrame(emptyRDD, df_schema)
 
+                # print(list_parts)
                 for j in list_parts:
-                    part_file = get_underlying_files(j)
-                    df = spark.read.parquet(*part_file)
+                    part_files = get_underlying_files(j)
+                    df = spark.read.parquet(*part_files)
                     df = split_col_geometry(df) 
 
                     for column in df_structure.columns:
-                        # print(col)
                         if column not in df.columns:
                             df = df.withColumn(column, lit(None).cast("string"))
+                            
 
                     store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{i}_geo_splitted/{j.split('/')[-2]}/")
 
             
             else:
                 store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{i}_geo_splitted/")
-    
-
-
