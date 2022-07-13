@@ -7,7 +7,7 @@ from math import ceil
 
 
 bag_objecten = [
-    "Woonplaats",
+    # "Woonplaats",
     # "Nummeraanduiding",
     # "Ligplaats",
     # "Standplaats",
@@ -60,18 +60,17 @@ def get_file_uris(object_key: str) -> str:
 
 def get_folder_names(object):
     client = storage.Client()
-    # client = storage.Client().from_service_account_json(
-    #     "/Users/eddylim/Documents/gcp_keys/prefect_key.json"
-    # )
 
-    blobs = client.list_blobs(
-        # bucket_or_name="dataverbinders-dev", prefix=f"kadaster/bag/{object}/", delimiter='/'
-        bucket_or_name="dataverbinders-dev", prefix=f"kadaster/bag/{object}/"
-    )
-        
-    parts = set(
-        ["/".join(blob.name.split("/")[:-1]) for blob in blobs if blob.name.endswith(".snappy.parquet")]
-    )
+    bucket = client.get_bucket(bucket_or_name="dataverbinders-dev")
+    blob_iter = bucket.list_blobs(prefix=f"kadaster/bag/{object}/", delimiter="/")
+
+    list(blob_iter)
+
+    # for part in blob_iter.prefixes:
+    #     print(part)
+
+    # parts = [f"gs://{bucket.name}/{folder}" for folder in blob_iter.prefixes]
+    parts = list(blob_iter.prefixes)
 
     return parts
 
@@ -84,7 +83,7 @@ def get_underlying_files(prefix):
     )
 
     files = ",".join(
-        [f"gs://{blob.bucket.name}/{blob.name}" for blob in blobs]
+        [f"gs://{blob.bucket.name}/{blob.name}" for blob in blobs if blob.name.endswith("snappy.parquet")]
     )
 
     return files
@@ -164,41 +163,44 @@ if __name__ == "__main__":
     # output_dir = "/Users/eddylim/Documents/work_repos/toepol_old/data/geo_test"
 
     for i in bag_objecten:
-        files = get_file_uris(i)
-        # df = load_parquet(spark, i) # For local
-        df = spark.read.load(files) 
+        # files = get_file_uris(i)
+        # # df = load_parquet(spark, i) # For local
+        # df = spark.read.load(files) 
         
-        if "geometry" in df.columns:
-            print(i)
-            df = split_col_geometry(df)
+        # if "geometry" in df.columns:
+        #     print(i)
+        #     df = split_col_geometry(df)
 
-            if i in ["Pand"]:
-                # df.printSchema()
-                list_parts = get_folder_names(i)
+        #     if i in ["Pand"]:
+        #         # df.printSchema()
+        #         list_parts = get_folder_names(i)
 
-                emptyRDD = spark.sparkContext.emptyRDD()
-                df_schema = df.schema
-                df_structure = spark.createDataFrame(emptyRDD, df_schema)
+        #         emptyRDD = spark.sparkContext.emptyRDD()
+        #         df_schema = df.schema
+        #         df_structure = spark.createDataFrame(emptyRDD, df_schema)
 
-                # print(list_parts)
-                for j in list_parts:
-                    # df = load_parts_parquet(spark, get_underlying_files(j))
-                    df = spark.read.load(get_underlying_files(j))
-                    df = split_col_geometry(df) 
+        #         # print(list_parts)
+        #         for j in list_parts:
+        #             # df = load_parts_parquet(spark, get_underlying_files(j))
+        #             df = spark.read.load(get_underlying_files(j))
+        #             df = split_col_geometry(df) 
 
-                    for column in df_structure.columns:
-                        # print(col)
-                        if column not in df.columns:
-                            df = df.withColumn(column, lit(None).cast("string"))
-                            # df = df.withColumn("geometry", struct(*[lit(None).alias(f"{column}"), col("geometry")["geo_point"].alias("geo_point")]))
-                            # print(column)
+        #             for column in df_structure.columns:
+        #                 # print(col)
+        #                 if column not in df.columns:
+        #                     df = df.withColumn(column, lit(None).cast("string"))
+        #                     # df = df.withColumn("geometry", struct(*[lit(None).alias(f"{column}"), col("geometry")["geo_point"].alias("geo_point")]))
+        #                     # print(column)
 
-                    store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{i}_geo_splitted/{j.split('/')[-1]}")
+        #             store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{i}_geo_splitted/{j.split('/')[-1]}")
 
             
-            else:
-                # store_df_on_gcs(df, f"{output_dir}/{i}3") # For local
-                store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{i}_geo_splitted/")
-    
+        #     else:
+        #         # store_df_on_gcs(df, f"{output_dir}/{i}3") # For local
+        #         store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{i}_geo_splitted/")
+
+        files = get_folder_names(i)
+        for file in files:
+            get_underlying_files(file)
 
 
