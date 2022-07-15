@@ -45,10 +45,6 @@ def init_spark_session():
     )
     spark.conf.set("temporaryGcsBucket", "temp-data-pyspark")
     spark.conf.set("spark.sql.parquet.datetimeRebaseModeInWrite", "CORRECTED")
-    # spark.conf.set(
-    #     "spark.sql.legacy.parquet.datetimeRebaseModeInWrite", "CORRECTED"
-    # )
-    #  spark.sql("set spark.sql.parquet.compression.codec=uncompressed")
     return spark
 
 
@@ -129,7 +125,7 @@ def create_spark_df(
         .option("rootTag", "sl-bag-extract:bagStand")
         .option("rowTag", "sl-bag-extract:bagObject")
         .option("path", files)
-        .load(schema = schema_def)
+        .load(schema=schema_def)
     )
 
     df = df.select(f"Objecten:{object_type}.*")
@@ -238,7 +234,6 @@ def convert_points(
             "Historie:voorkomenidentificatie"
         ]
 
-        # if row["Objecten:geometrie"]["Objecten:punt"]["gml:Point"]["gml:pos"] is not None:
         if row["Objecten:geometrie"]["Objecten:punt"] is not None:
             point = row["Objecten:geometrie"]["Objecten:punt"]["gml:Point"][
                 "gml:pos"
@@ -347,10 +342,11 @@ def convert_vlak(
             "Historie:voorkomenidentificatie"
         ]
 
-
         if row["Objecten:geometrie"]["Objecten:vlak"] is not None:
             ## Added new:
-            dimension = row["Objecten:geometrie"]["Objecten:vlak"]["gml:Polygon"]["_srsDimension"]
+            dimension = row["Objecten:geometrie"]["Objecten:vlak"][
+                "gml:Polygon"
+            ]["_srsDimension"]
 
             # exterior
             positions = row["Objecten:geometrie"]["Objecten:vlak"][
@@ -360,7 +356,10 @@ def convert_vlak(
             exterior_lr = create_linear_ring(positions, transformer, dimension)
 
             # interiors
-            if "gml:interior" in row["Objecten:geometrie"]["Objecten:vlak"]["gml:Polygon"]:
+            if (
+                "gml:interior"
+                in row["Objecten:geometrie"]["Objecten:vlak"]["gml:Polygon"]
+            ):
 
                 interior = row["Objecten:geometrie"]["Objecten:vlak"][
                     "gml:Polygon"
@@ -370,15 +369,17 @@ def convert_vlak(
                 if interior is not None:
                     if isinstance(interior, list):
                         for interior_row in interior:
-                            positions = interior_row["gml:LinearRing"]["gml:posList"][
-                                "_VALUE"
-                            ]
+                            positions = interior_row["gml:LinearRing"][
+                                "gml:posList"
+                            ]["_VALUE"]
                             interior_lr = create_linear_ring(
                                 positions, transformer, dimension
                             )
                             interior_lrs.append(interior_lr)
                     else:
-                        positions = interior["gml:LinearRing"]["gml:posList"]["_VALUE"]
+                        positions = interior["gml:LinearRing"]["gml:posList"][
+                            "_VALUE"
+                        ]
                         interior_lr = create_linear_ring(positions, transformer)
                         interior_lrs.append(interior_lr)
 
@@ -503,7 +504,6 @@ def convert_geometry(df: DataFrame, spark: SparkSession) -> DataFrame:
         for col in new_geo_cols:
             df = df.drop(col)
 
-
     return df
 
 
@@ -520,17 +520,11 @@ def store_df_as_parquet(df: DataFrame, object_type: str, data_dir: str) -> str:
     :rtype: str
     """
     target_folder = f"{data_dir}/{object_type}"
-    #  df.repartition(1).write.format("parquet").mode("overwrite").save(
-        #  target_folder
-    #  )
-    df.write.format("parquet").mode("overwrite").save(target_folder)
     return target_folder
 
 
 def store_df_on_gcs(df: DataFrame, target_blob: str):
-    df.write.format("parquet").mode("overwrite").save(
-        target_blob
-    )
+    df.write.format("parquet").mode("overwrite").save(target_blob)
 
 
 def main():
@@ -545,15 +539,15 @@ def main():
         if val in ["Pand", "Verblijfsobject"]:
             df_schema = load_schema(val)
 
-            # num_files = 30
-            num_files = 25
+            num_files = 100
             nxt_number = 0
             for i in range(0, len(files[0]), num_files):
                 nxt_number += num_files
                 print(f"Processing {nxt_number} xml files")
-                # print(files[0][i:min(nxt_number, len(files[0]))])
 
-                file_str = ",".join(files[0][i:min(nxt_number, len(files[0]))])
+                file_str = ",".join(
+                    files[0][i : min(nxt_number, len(files[0]))]
+                )
                 df = create_spark_df(spark, val, file_str, df_schema)
 
                 df = convert_geometry(df, spark)
@@ -561,12 +555,37 @@ def main():
                 if val == "Verblijfsobject":
                     df_columns = df.select("geometry.*").columns
                     if "geo_polygon" not in df_columns:
-                        df = df.withColumn("geometry", struct(*[lit(None).cast("string").alias("geo_polygon"), col("geometry")["geo_point"].alias("geo_point")]))
+                        df = df.withColumn(
+                            "geometry",
+                            struct(
+                                *[
+                                    lit(None)
+                                    .cast("string")
+                                    .alias("geo_polygon"),
+                                    col("geometry")["geo_point"].alias(
+                                        "geo_point"
+                                    ),
+                                ]
+                            ),
+                        )
 
                     if "geo_point" not in df_columns:
-                        df = df.withColumn("geometry", struct(*[col("geometry")["geo_polygon"].alias("geo_polygon"), lit(None).cast("string").alias("geo_point")]))
+                        df = df.withColumn(
+                            "geometry",
+                            struct(
+                                *[
+                                    col("geometry")["geo_polygon"].alias(
+                                        "geo_polygon"
+                                    ),
+                                    lit(None).cast("string").alias("geo_point"),
+                                ]
+                            ),
+                        )
 
-                store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{val}/part_{int(i / num_files)}")
+                store_df_on_gcs(
+                    df,
+                    f"gs://dataverbinders-dev/kadaster/bag/{val}/part_{int(i / num_files)}",
+                )
                 del df
 
         else:
@@ -574,22 +593,6 @@ def main():
             df = convert_geometry(df, spark)
             target = f"gs://dataverbinders-dev/kadaster/bag/{val}"
             store_df_on_gcs(df, target)
-
-    # for key, val in object_map.items():
-    #     print(f"Processing {val}")
-    #     files = get_file_uris(key)
-    #     df_schema = export_schema_spark_df(spark, files[1])
-
-    #     num_files = 30
-    #     nxt_number = 0
-    #     for i in range(0, len(files[0]), num_files):
-    #         nxt_number += num_files
-
-    #         file_str = ",".join(files[0][i:nxt_number])
-    #         df = create_spark_df(spark, val, file_str, df_schema)
-
-    #         df = convert_geometry(df, spark)
-    #         store_df_on_gcs(df, f"gs://dataverbinders-dev/kadaster/bag/{val}/part_{int(i / num_files)}")
 
 
 if __name__ == "__main__":
