@@ -77,7 +77,8 @@ with Flow(
 
     # Key Value Pairs
     job_config = get_key_value(key="dataproc_bag_batch_job_config")
-    job_config2 = get_key_value(key="dataproc_bag_batch_job_wkt_split_config")
+    job_config2 = get_key_value(key="dataproc_bag_batch_job_create_dim")
+    job_config3 = get_key_value(key="dataproc_bag_batch_job_wkt_split_config")
 
     data_dir = create_directory(DATA_DIR)
 
@@ -113,6 +114,12 @@ with Flow(
             gcs_temp_bucket,
             "bag/dataproc",
         )
+        py_file_create_dim1 = upload_to_gcs(
+            gcp_credentials1,
+            "/opt/prefect/pyspark/batch_job_create_dim.py",
+            gcs_temp_bucket,
+            "bag/dataproc",
+        )
         py_file_wkt_split1 = upload_to_gcs(
             gcp_credentials1,
             "/opt/prefect/pyspark/batch_job_wkt_split.py",
@@ -130,12 +137,14 @@ with Flow(
         gcp_credentials2 = PrefectSecret("GCP_CREDENTIALS")
         uris2 = dummy_task()
         py_file2 = dummy_task()
+        py_file_create_dim2 = dummy_task()
         py_file_wkt_split2 = dummy_task()
         jar_file2 = dummy_task()
 
     gcp_credentials = merge(gcp_credentials1, gcp_credentials2)
     uris = merge(uris1, uris2)
     py_file = merge(py_file1, py_file2)
+    py_file_create_dim = merge(py_file_create_dim1, py_file_create_dim2)
     py_file_wkt_split = merge(py_file_wkt_split1, py_file_wkt_split2)
     jar_file = merge(jar_file1, jar_file2)
 
@@ -151,6 +160,13 @@ with Flow(
         gcp_credentials,
         gcp_region,
         job_config2,
+        dependencies=[batch_result, py_file_create_dim]
+    )
+
+    batch_3 = submit_batch_job(
+        gcp_credentials,
+        gcp_region,
+        job_config3,
         dependencies=[batch_result, py_file_wkt_split]
     )
 
