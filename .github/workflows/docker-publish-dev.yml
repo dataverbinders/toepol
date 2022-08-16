@@ -17,10 +17,16 @@ jobs:
   list_flows:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
       - name: list flows
-        run: |
-          ls
+        uses: mathiasvr/command-output@v1
+        id: flows
+        with:
+          run: ls flows
     
+      - run: echo ${{ steps.flows.outputs.stdout }}
     
     
   build_dev:
