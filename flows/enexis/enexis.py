@@ -4,12 +4,10 @@ from pyarrow import csv
 import pyarrow.parquet as pq
 from google.cloud import storage
 from google.oauth2 import service_account
-# from bag-extract.src.util.gcp import gcs
 
 import prefect
-from prefect import Flow, Parameter, task, unmapped, resource_manager
+from prefect import Flow, Parameter, task, unmapped
 from prefect.tasks.secrets import PrefectSecret
-from pyspark.sql import SparkSession
 
 enexis_data = [
     "2019"
@@ -18,10 +16,16 @@ enexis_data = [
     , "2022"
 ]
 
+@task
+def create_dir(dir):
+    os.mkdir(dir)
+    
+    return dir
+
 
 @task
-def get_csv(years):
-    csv_output = f"{os.getcwd()}/data/enexis-kleinverbruik-{years}.csv"
+def get_csv(years, directory):
+    csv_output = f"{directory}/enexis-kleinverbruik-{years}.csv"
     csv_url = f"https://s3-eu-west-1.amazonaws.com/enxp433-oda01/kv/Enexis_kleinverbruiksgegevens_0101{years}.csv"
 
     
@@ -33,7 +37,6 @@ def get_csv(years):
     return csv_output
 
 
-# REPLACE with nl-open-data method 'csv_to_parquet()'.
 @task
 def csv_to_parquet(csv_file, encoding="utf-8", delimiter=","):
     encoding
@@ -65,19 +68,19 @@ def get_storage_client(credentials: dict):
 
 @task
 def parquet_to_gcs(file, bucket_name, credential):
-    file_name = file.split("/")[-1]
-    blob_name = f"enexis/{file_name}"
+    # file_name = file.split("/")[-1]
+    # blob_name = f"enexis/{file_name}"
 
     # Local Testing.
-    # client = storage.Client.from_service_account_json(
-    #     credential
-    # )
+    client = storage.Client.from_service_account_json(
+        credential
+    )
 
     # Prefect
-    client = get_storage_client.run(credential)
+    # client = get_storage_client.run(credential)
 
     bucket = client.bucket(bucket_name)
-    blob = bucket.blob(blob_name)
+    blob = bucket.blob(file)
 
     blob.upload_from_filename(file)
 
@@ -93,17 +96,13 @@ if __name__ == "__main__":
         logger = prefect.context.get("logger")
 
         # Secrets
-        gcp_credentials = PrefectSecret("GCP_CREDENTIALS")
-        # gcp_credentials = "/Users/eddylim/Documents/gcp_keys/prefect_key.json"
+        # gcp_credentials = PrefectSecret("GCP_CREDENTIALS")
+        gcp_credentials = "/Users/eddylim/Documents/gcp_keys/prefect_key.json"
+        enexis_dir = Parameter("enexis_dir", default="enexis")
         bucket_name = Parameter("bucket_name", default="temp-prefect-data")
 
-        # for year in enexis_data:
-        #     path_csv = get_csv(year)
-        #     path_pq = csv_to_parquet(path_csv, delimiter=";")
-        #     parquet_to_gcs(path_pq, bucket_name, gcp_credentials)
-
-
-        path_csv = get_csv.map(enexis_data)
+        data_dir = create_dir(enexis_dir)
+        path_csv = get_csv.map(years=enexis_data, directory=unmapped(data_dir))
         path_pq = csv_to_parquet.map(path_csv, delimiter=unmapped(";"))
         parquet_to_gcs.map(path_pq, unmapped(bucket_name), unmapped(gcp_credentials))
         
