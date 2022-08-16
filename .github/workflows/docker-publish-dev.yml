@@ -12,6 +12,15 @@ env:
 
 
 jobs:
+  list_flows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: list flows
+        run: |
+          ls flows
+    
+    
+    
   build_dev:
 
     runs-on: ubuntu-latest
