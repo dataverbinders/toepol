@@ -1,0 +1,8 @@
+google-api-core
+google-auth
+google-cloud-core==2.3.0
+google-cloud-dataproc==4.0.2
+google-cloud-storage==2.4.0
+pyarrow==8.0.0
+wget==3.2
+
