@@ -17,6 +17,8 @@ enexis_data = [
     , "2022"
 ]
 
+load_dotenv()
+
 @task
 def create_dir(dir):
     os.mkdir(dir)
@@ -90,4 +92,4 @@ with Flow(
 
 prefect_project = "toepol" if os.getenv("production") == "True" else "dev-toepol"
 
-flow.register("prefect-project")
+flow.register(prefect_project)
