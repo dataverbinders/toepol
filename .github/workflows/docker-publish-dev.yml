@@ -1,8 +1,6 @@
 name: Docker Build and Push
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
     paths-ignore:
@@ -13,29 +11,14 @@ env:
   REGISTRY_HOSTNAME: eu.gcr.io
 
 
-jobs:
-  list_flows:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        
-      - name: list flows
-        uses: mathiasvr/command-output@v1
-        id: flows
-        with:
-          run: ls flows
-    
-      - run: echo ${{ steps.flows.outputs.stdout }}
-    
-    
+jobs:    
   build_dev:
 
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        flow: [bag-extract]
+        flow: [bag-extract, enexis]
     
     steps:
       - name: Checkout repository
