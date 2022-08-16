@@ -1,7 +1,7 @@
 version: "3.7"
 
 services:
-  bag-extract:
+  enexis:
       build:
         context: .
         dockerfile: Dockerfile
@@ -12,3 +12,5 @@ services:
         prefect backend cloud
         prefect auth login --key $prefect_api_key
         python3 /opt/prefect/enexis/flow.py
+      env_file:
+      - .env
