@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: list flows
         run: |
-          ls flows
+          ls
     
     
     
